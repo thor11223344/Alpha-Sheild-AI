@@ -18,13 +18,13 @@ import {
 import { StockSelector } from "@/components/StockSelector";
 
 const HelpTooltip = ({ text }: { text: string }) => (
-  <div className="group relative inline-flex items-center ml-1 cursor-help">
+  <span className="group relative inline-flex items-center ml-1 cursor-help">
     <Info className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
-    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10 text-center">
+    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10 text-center">
       {text}
-      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-800"></div>
-    </div>
-  </div>
+      <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-800 block"></span>
+    </span>
+  </span>
 );
 
 export default function StressTestPage() {
@@ -303,17 +303,17 @@ export default function StressTestPage() {
                 <ul className="mt-6 space-y-4">
                   <li className="flex items-start">
                     <span className="text-xl mr-3">📉</span>
-                    <p className="text-lg">
+                    <div className="text-lg">
                       <strong>In a bad month</strong>, you could realistically lose around <strong>{formatCurrency(data.risk_metrics.var_95_value)}</strong>.
                       <HelpTooltip text="This is the Value at Risk (VaR). 95% of the time, your losses will be less than this." />
-                    </p>
+                    </div>
                   </li>
                   <li className="flex items-start">
                     <span className="text-xl mr-3">🚨</span>
-                    <p className="text-lg">
+                    <div className="text-lg">
                       <strong>In an extreme crash</strong>, your average loss in the worst 5% of cases would be about <strong>{formatCurrency(data.risk_metrics.cvar_95_value)}</strong>.
                       <HelpTooltip text="This is the Expected Shortfall (CVaR). It measures how bad things get when the VaR threshold is broken." />
-                    </p>
+                    </div>
                   </li>
                 </ul>
               </div>
