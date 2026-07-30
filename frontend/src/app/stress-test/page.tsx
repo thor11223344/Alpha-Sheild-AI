@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { TrendingDown, Play, AlertCircle, Trash2, Plus, Info, ChevronDown, ChevronUp, ShieldAlert, ShieldCheck, Shield } from "lucide-react";
+import { TrendingDown, Play, AlertCircle, Trash2, Plus, Info, ChevronDown, ChevronUp, ShieldAlert, ShieldCheck, Shield, Cpu, Zap } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -17,7 +17,6 @@ import {
 
 import { StockSelector } from "@/components/StockSelector";
 
-// A simple tooltip component
 const HelpTooltip = ({ text }: { text: string }) => (
   <div className="group relative inline-flex items-center ml-1 cursor-help">
     <Info className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
@@ -35,6 +34,9 @@ export default function StressTestPage() {
   const [showTechDetails, setShowTechDetails] = useState(false);
   
   const [initialValue, setInitialValue] = useState<number>(100000);
+  const [modelType, setModelType] = useState<string>("regime_switching");
+  const [samplerType, setSamplerType] = useState<string>("sobol");
+
   const [portfolio, setPortfolio] = useState([
     { ticker: "RELIANCE", name: "Reliance Industries", weight: 40 },
     { ticker: "TCS", name: "Tata Consultancy Services", weight: 40 },
@@ -80,13 +82,14 @@ export default function StressTestPage() {
     try {
       const payload = {
         tickers: portfolio.map(p => p.ticker.toUpperCase().replace(/\.NS$/i, "")),
-        weights: portfolio.map(p => p.weight / 100), // convert to decimals
-        initial_value: initialValue
+        weights: portfolio.map(p => p.weight / 100),
+        initial_value: initialValue,
+        model_type: modelType,
+        sampler_type: samplerType
       };
       
       const response = await axios.post("http://localhost:8000/api/portfolio-stress/", payload);
       setData(response.data);
-      // Scroll to results
       setTimeout(() => {
         document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
@@ -126,45 +129,76 @@ export default function StressTestPage() {
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      <div className="mb-10 text-center max-w-2xl mx-auto">
+      <div className="mb-10 text-center max-w-3xl mx-auto">
         <div className="inline-flex items-center justify-center p-3 bg-emerald-100 rounded-full mb-4">
           <TrendingDown className="w-8 h-8 text-emerald-600" />
         </div>
-        <h1 className="text-4xl font-extrabold text-gray-900 mb-4">Portfolio Stress Tester</h1>
+        <h1 className="text-4xl font-extrabold text-gray-900 mb-4">Production Monte Carlo Stress Engine</h1>
         <p className="text-lg text-gray-600">
-          See how your investments might hold up during market crashes. We simulate 10,000 alternate futures using advanced math to give you simple, actionable insights.
+          Run institutional 10,000-path simulations using Sobol Quasi-Monte Carlo sampling, Merton Jump-Diffusion, and Regime-Switching HMM models.
         </p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden mb-12">
-        <div className="p-8 bg-gray-50/50 border-b border-gray-100">
-          <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-gray-200 shadow-sm max-w-3xl">
+        <div className="p-8 bg-gray-50/50 border-b border-gray-100 space-y-6">
+          
+          {/* Top Controls: Initial Capital, Model Engine & Sampler Selection */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
             <div>
-              <label className="block text-sm font-bold text-gray-800 mb-0.5">
-                Total Investment Capital
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                Investment Capital (₹)
               </label>
-              <p className="text-xs text-gray-500">Set the principal amount to run the Monte Carlo simulation against</p>
+              <div className="relative">
+                <span className="absolute left-3 top-2 text-gray-500 font-bold">₹</span>
+                <input
+                  type="text"
+                  value={initialValue ? initialValue.toLocaleString('en-IN') : ''}
+                  onChange={(e) => {
+                    const rawVal = e.target.value.replace(/,/g, '').replace(/\D/g, '');
+                    const num = Number(rawVal);
+                    setInitialValue(num);
+                    setData(null);
+                  }}
+                  placeholder="1,00,000"
+                  className="w-full pl-7 pr-3 py-1.5 border border-gray-200 rounded-lg font-bold text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
             </div>
-            <div className="relative w-full md:w-56">
-              <span className="absolute left-3.5 top-2.5 text-gray-500 font-bold">₹</span>
-              <input
-                type="text"
-                value={initialValue ? initialValue.toLocaleString('en-IN') : ''}
-                onChange={(e) => {
-                  const rawVal = e.target.value.replace(/,/g, '').replace(/\D/g, '');
-                  const num = Number(rawVal);
-                  setInitialValue(num);
-                  setData(null);
-                }}
-                placeholder="1,00,000"
-                className="w-full pl-8 pr-4 py-2 border border-gray-200 rounded-lg font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-              />
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center">
+                <Cpu className="w-3.5 h-3.5 text-blue-500 mr-1" /> Stochastic Model
+              </label>
+              <select
+                value={modelType}
+                onChange={(e) => { setModelType(e.target.value); setData(null); }}
+                className="w-full px-3 py-1.5 border border-gray-200 rounded-lg font-semibold text-gray-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+              >
+                <option value="regime_switching">HMM Regime-Switching</option>
+                <option value="merton_jump">Merton Jump-Diffusion</option>
+                <option value="gbm">Multivariate GBM</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center">
+                <Zap className="w-3.5 h-3.5 text-orange-500 mr-1" /> Sampler Engine
+              </label>
+              <select
+                value={samplerType}
+                onChange={(e) => { setSamplerType(e.target.value); setData(null); }}
+                className="w-full px-3 py-1.5 border border-gray-200 rounded-lg font-semibold text-gray-800 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+              >
+                <option value="sobol">Sobol Quasi-Monte Carlo (QMC)</option>
+                <option value="antithetic">Antithetic Variates</option>
+                <option value="standard">Standard Normal (RNG)</option>
+              </select>
             </div>
           </div>
 
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
             <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-sm mr-3">1</span>
-            What's in your portfolio?
+            Portfolio Allocation & Stock Selection
           </h2>
           
           <div className="space-y-4 max-w-3xl">
@@ -249,14 +283,19 @@ export default function StressTestPage() {
       {data && (
         <div id="results-section" className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
           
-          {/* Plain English Summary */}
+          {/* Executive Summary */}
           <div className={`p-8 rounded-2xl border ${getRiskColor(data.risk_metrics.risk_color)}`}>
             <div className="flex items-start gap-6">
               <div className="bg-white p-4 rounded-full shadow-sm">
                 {getRiskIcon(data.risk_metrics.risk_label)}
               </div>
               <div>
-                <h3 className="text-3xl font-bold mb-2">{data.risk_metrics.risk_label}</h3>
+                <div className="flex items-center gap-3 mb-2 flex-wrap">
+                  <h3 className="text-3xl font-bold">{data.risk_metrics.risk_label}</h3>
+                  <span className="text-xs font-black bg-white/80 border px-3 py-1 rounded-full uppercase tracking-wider">
+                    Model: {data.model_metadata?.model_used} | Sampler: {data.model_metadata?.sampler_used}
+                  </span>
+                </div>
                 <p className="text-lg opacity-90 max-w-3xl">
                   Based on current market conditions ({data.regime.name.toLowerCase()}), if you invested <strong>{formatCurrency(data.simulation.initial_value)}</strong> today for 30 days:
                 </p>
@@ -373,14 +412,14 @@ export default function StressTestPage() {
             </div>
           </div>
 
-          {/* Technical Details Accordion */}
+          {/* Institutional Technical Diagnostics Accordion */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <button 
               onClick={() => setShowTechDetails(!showTechDetails)}
               className="w-full px-6 py-4 flex items-center justify-between text-left focus:outline-none hover:bg-gray-50 transition"
             >
-              <div className="flex items-center text-gray-700 font-semibold">
-                <span className="mr-2">🔬</span> Show technical details
+              <div className="flex items-center text-gray-800 font-bold">
+                <span className="mr-2">🔬</span> Institutional Numerical & Statistical Diagnostics
               </div>
               {showTechDetails ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
             </button>
@@ -389,32 +428,36 @@ export default function StressTestPage() {
               <div className="px-6 pb-6 pt-2 border-t border-gray-100">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Model Engine</div>
-                    <div className="font-medium">Student's t-Copula / GBM</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Stochastic Process</div>
+                    <div className="font-bold text-gray-900">{data.model_metadata?.model_used}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Simulations</div>
-                    <div className="font-medium">{data.simulation.num_simulations.toLocaleString()} paths</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Sampler Method</div>
+                    <div className="font-bold text-blue-600">{data.model_metadata?.sampler_used}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Regime State</div>
-                    <div className="font-medium text-blue-600">{data.regime.name}</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Standard Error (SE)</div>
+                    <div className="font-bold text-gray-900">₹{data.model_metadata?.standard_error?.toFixed(2)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">95% Mean Confidence Band</div>
+                    <div className="font-bold text-green-600">₹{Math.round(data.model_metadata?.ci_95_lower).toLocaleString()} – ₹{Math.round(data.model_metadata?.ci_95_upper).toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Skewness</div>
+                    <div className="font-bold text-gray-900">{data.model_metadata?.skewness?.toFixed(3)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Excess Kurtosis</div>
+                    <div className="font-bold text-gray-900">{data.model_metadata?.kurtosis?.toFixed(3)}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Max Drawdown (95%)</div>
-                    <div className="font-medium text-red-600">-{data.risk_metrics.max_drawdown_percent_95.toFixed(2)}%</div>
+                    <div className="font-bold text-red-600">-{data.risk_metrics.max_drawdown_percent_95.toFixed(2)}%</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">VaR 99%</div>
-                    <div className="font-medium">-{formatCurrency(data.risk_metrics.var_99_value)}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Best Case Max</div>
-                    <div className="font-medium text-green-600">{formatCurrency(data.risk_metrics.best_case)}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Worst Case Min</div>
-                    <div className="font-medium text-red-600">{formatCurrency(data.risk_metrics.worst_case)}</div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">VaR 99% (Extreme)</div>
+                    <div className="font-bold text-red-600">-{formatCurrency(data.risk_metrics.var_99_value)}</div>
                   </div>
                 </div>
               </div>

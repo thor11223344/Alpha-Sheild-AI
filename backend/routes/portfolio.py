@@ -8,12 +8,24 @@ import pandas as pd
 import yfinance as yf
 from functools import lru_cache
 
+from engine.monte_carlo import (
+    SimulationConfig,
+    VarianceReductionMethod,
+    GeometricBrownianMotion,
+    MertonJumpDiffusion,
+    HestonStochasticVolatility,
+    MonteCarloEngine,
+    MonteCarloAnalytics
+)
+
 router = APIRouter()
 
 class PortfolioInput(BaseModel):
     tickers: List[str]
     weights: List[float]
     initial_value: Optional[float] = 100000.0
+    model_type: Optional[str] = "regime_switching"  # "regime_switching", "merton_jump", "gbm", "heston"
+    sampler_type: Optional[str] = "sobol"          # "sobol", "antithetic", "standard"
 
 @lru_cache(maxsize=1)
 def get_nifty_data_cached(period="2y"):
@@ -92,98 +104,140 @@ def run_stress_test(portfolio: PortfolioInput):
         mean_returns = portfolio_returns.mean().values
         cov_matrix = portfolio_returns.cov().values
         
-        # 4. Advanced Monte Carlo Engine - Vectorized
+        # 4. Map Sampler Choice
+        sampler_map = {
+            "sobol": VarianceReductionMethod.SOBOL,
+            "antithetic": VarianceReductionMethod.ANTITHETIC,
+            "standard": VarianceReductionMethod.NONE
+        }
+        vr_method = sampler_map.get(portfolio.sampler_type, VarianceReductionMethod.SOBOL)
+
         num_simulations = 10000
         forecast_days = 30
         initial_value = float(portfolio.initial_value) if portfolio.initial_value and portfolio.initial_value > 0 else 100000.0
-        
-        # State 0 parameters (Bull / Normal regime)
-        drift_0 = mean_returns
-        vol_scalar_0 = 1.0
-        cov_0 = cov_matrix * (vol_scalar_0 ** 2)
-        try:
-            L_0 = np.linalg.cholesky(cov_0)
-        except np.linalg.LinAlgError:
-            L_0 = np.linalg.cholesky(cov_0 + np.eye(num_assets) * 1e-6)
+
+        # Create Engine Config
+        sim_config = SimulationConfig(
+            n_paths=num_simulations,
+            n_steps=forecast_days,
+            time_horizon=forecast_days / 252.0,
+            initial_value=initial_value,
+            variance_reduction=vr_method,
+            seed=42
+        )
+
+        # 5. Execute Simulation Path Generation based on Model Selection
+        model_choice = portfolio.model_type.lower() if portfolio.model_type else "regime_switching"
+
+        if model_choice == "merton_jump":
+            # Portfolio scalar Merton Jump Diffusion
+            port_mu = float(np.dot(mean_returns, weights) * 252)
+            port_vol = float(np.sqrt(np.dot(weights.T, np.dot(cov_matrix * 252, weights))))
             
-        # State 1 parameters (Bear / Volatile regime - stressed drift & volatility)
-        daily_vols = np.sqrt(np.maximum(1e-8, np.diagonal(cov_matrix)))
-        drift_1 = mean_returns - 0.5 * daily_vols  # Regime-conditioned downside drift stress
-        vol_scalar_1 = 1.4  # Volatility amplification in bear regime
-        cov_1 = cov_matrix * (vol_scalar_1 ** 2)
-        try:
-            L_1 = np.linalg.cholesky(cov_1)
-        except np.linalg.LinAlgError:
-            L_1 = np.linalg.cholesky(cov_1 + np.eye(num_assets) * 1e-6)
+            jump_proc = MertonJumpDiffusion(
+                mu=port_mu,
+                sigma=port_vol,
+                jump_lambda=2.0,
+                jump_mu=-0.08,
+                jump_sigma=0.12
+            )
+            engine = MonteCarloEngine(sim_config)
+            engine_res = engine.run(jump_proc, initial_state=np.array([initial_value]))
+            
+            # Generate paths for UI rendering
+            shocks = engine.sampler.generate_shocks(num_simulations, forecast_days, 1, seed=42)
+            paths_matrix = jump_proc.simulate_paths(num_simulations, forecast_days, sim_config.dt, np.array([initial_value]), shocks)
+            price_paths = paths_matrix[:, :, 0].T  # Shape: (31, 10000)
 
-        # Simulate Regimes for all paths and days
-        states = np.zeros((forecast_days, num_simulations), dtype=int)
-        curr_states = np.full(num_simulations, current_state)
-        
-        for t in range(forecast_days):
-            rand = np.random.rand(num_simulations)
-            probs_0 = transmat[curr_states, 0]
-            next_states = np.where(rand < probs_0, 0, 1)
-            states[t] = next_states
-            curr_states = next_states
+        elif model_choice == "gbm":
+            # Multivariate GBM
+            gbm_proc = GeometricBrownianMotion(mu=mean_returns, cov_matrix=cov_matrix)
+            engine = MonteCarloEngine(sim_config)
+            
+            shocks = engine.sampler.generate_shocks(num_simulations, forecast_days, num_assets, seed=42)
+            asset_paths = gbm_proc.simulate_paths(num_simulations, forecast_days, sim_config.dt, initial_state=weights * initial_value, random_shocks=shocks)
+            # Sum portfolio values across assets: shape (n_paths, n_steps + 1)
+            port_paths = np.sum(asset_paths, axis=-1)
+            price_paths = port_paths.T
 
-        # Generate Shocks (Student's t-distribution for fat tails, df=5)
-        Z = np.random.standard_t(df=5, size=(forecast_days, num_simulations, num_assets)) * np.sqrt(3/5)
-        
-        # Calculate asset returns for both states
-        returns_0 = drift_0 + Z @ L_0.T
-        returns_1 = drift_1 + Z @ L_1.T
-        
-        # Select returns based on the simulated state
-        states_expanded = states[:, :, np.newaxis]
-        daily_asset_returns = np.where(states_expanded == 0, returns_0, returns_1)
-        
-        # Calculate portfolio returns and cumulative price paths
-        daily_port_returns = daily_asset_returns @ weights
-        price_paths = initial_value * np.cumprod(1 + daily_port_returns, axis=0)
-        
-        # Prepend initial value
-        initial_row = np.full((1, num_simulations), initial_value)
-        price_paths = np.vstack([initial_row, price_paths]) # Shape: (31, 10000)
-        
-        # Risk Metrics
+        else:
+            # Default: Advanced HMM Regime-Switching Vectorised Simulation
+            drift_0 = mean_returns
+            cov_0 = cov_matrix
+            try:
+                L_0 = np.linalg.cholesky(cov_0)
+            except np.linalg.LinAlgError:
+                L_0 = np.linalg.cholesky(cov_0 + np.eye(num_assets) * 1e-6)
+                
+            daily_vols = np.sqrt(np.maximum(1e-8, np.diagonal(cov_matrix)))
+            drift_1 = mean_returns - 0.5 * daily_vols
+            cov_1 = cov_matrix * 1.96
+            try:
+                L_1 = np.linalg.cholesky(cov_1)
+            except np.linalg.LinAlgError:
+                L_1 = np.linalg.cholesky(cov_1 + np.eye(num_assets) * 1e-6)
+
+            states = np.zeros((forecast_days, num_simulations), dtype=int)
+            curr_states = np.full(num_simulations, current_state)
+            
+            for t in range(forecast_days):
+                rand = np.random.rand(num_simulations)
+                probs_0 = transmat[curr_states, 0]
+                next_states = np.where(rand < probs_0, 0, 1)
+                states[t] = next_states
+                curr_states = next_states
+
+            # Generate Shocks using engine Sampler (Sobol or Antithetic)
+            engine = MonteCarloEngine(sim_config)
+            Z = engine.sampler.generate_shocks(num_simulations, forecast_days, num_assets, seed=42)
+            
+            returns_0 = drift_0 + Z @ L_0.T
+            returns_1 = drift_1 + Z @ L_1.T
+            
+            states_expanded = states[:, :, np.newaxis]
+            daily_asset_returns = np.where(states_expanded == 0, returns_0, returns_1)
+            
+            daily_port_returns = daily_asset_returns @ weights
+            price_paths_sim = initial_value * np.cumprod(1 + daily_port_returns, axis=0)
+            
+            initial_row = np.full((1, num_simulations), initial_value)
+            price_paths = np.vstack([initial_row, price_paths_sim])
+
+        # 6. Advanced Analytics & Summary Metrics
         final_values = price_paths[-1, :]
+        summary_stats = MonteCarloAnalytics.compute_summary_statistics(
+            terminal_values=final_values,
+            initial_value=initial_value,
+            confidence_level=0.95
+        )
+
+        drawdown_stats = MonteCarloAnalytics.calculate_drawdowns(price_paths.T)
+        convergence_diag = MonteCarloAnalytics.compute_convergence_series(final_values, step_size=max(10, num_simulations // 40))
+
+        var_95_val = float(np.percentile(final_values, 5))
+        var_99_val = float(np.percentile(final_values, 1))
         
-        var_95 = float(np.percentile(final_values, 5))
-        var_99 = float(np.percentile(final_values, 1))
-        
-        worse_than_var_95 = final_values[final_values < var_95]
-        if len(worse_than_var_95) == 0:
-            worse_than_var_95 = final_values[final_values <= var_95]
-        cvar_95 = float(np.mean(worse_than_var_95)) if len(worse_than_var_95) > 0 else var_95 * 0.95
-        
-        max_drawdowns = (initial_value - np.min(price_paths, axis=0)) / initial_value
-        max_drawdowns = np.where(max_drawdowns < 0, 0, max_drawdowns)
-        max_drawdown_median = float(np.median(max_drawdowns))
-        max_drawdown_95 = float(np.percentile(max_drawdowns, 95))
-        
+        worse_than_var = final_values[final_values <= var_95_val]
+        cvar_95_val = float(np.mean(worse_than_var)) if len(worse_than_var) > 0 else var_95_val
+
         prob_loss_0 = float(np.mean(final_values < initial_value) * 100)
         prob_loss_10 = float(np.mean(final_values < initial_value * 0.90) * 100)
         prob_loss_20 = float(np.mean(final_values < initial_value * 0.80) * 100)
-        
-        best_case = float(np.max(final_values))
-        worst_case = float(np.min(final_values))
-        median_case = float(np.median(final_values))
-        
-        loss_percent_cvar = (initial_value - cvar_95) / initial_value
-        if loss_percent_cvar < 0.05:
+
+        loss_pct_cvar = (initial_value - cvar_95_val) / initial_value
+        if loss_pct_cvar < 0.05:
             risk_label = "Low Risk"
             risk_color = "green"
-        elif loss_percent_cvar < 0.15:
+        elif loss_pct_cvar < 0.15:
             risk_label = "Moderate Risk"
             risk_color = "yellow"
-        elif loss_percent_cvar < 0.25:
+        elif loss_pct_cvar < 0.25:
             risk_label = "High Risk"
             risk_color = "orange"
         else:
             risk_label = "Very High Risk"
             risk_color = "red"
-            
+
         percentiles = []
         for day in range(forecast_days + 1):
             day_values = price_paths[day, :]
@@ -197,7 +251,7 @@ def run_stress_test(portfolio: PortfolioInput):
                 "p90": float(np.percentile(day_values, 90)),
                 "p95": float(np.percentile(day_values, 95))
             })
-            
+
         paths_for_ui = price_paths[:, :20].T.tolist()
 
         return {
@@ -206,20 +260,35 @@ def run_stress_test(portfolio: PortfolioInput):
                 "mean_daily_return": float(state_mean),
                 "volatility": float(np.sqrt(state_var))
             },
+            "model_metadata": {
+                "model_used": model_choice.upper(),
+                "sampler_used": vr_method.value.upper(),
+                "standard_error": summary_stats["standard_error"],
+                "ci_95_lower": summary_stats["ci_95_lower"],
+                "ci_95_upper": summary_stats["ci_95_upper"],
+                "skewness": summary_stats["skewness"],
+                "kurtosis": summary_stats["kurtosis"]
+            },
             "risk_metrics": {
-                "var_95_value": float(max(0, initial_value - var_95)),
-                "var_99_value": float(max(0, initial_value - var_99)),
-                "cvar_95_value": float(max(0, initial_value - cvar_95)),
-                "max_drawdown_percent_median": float(max_drawdown_median * 100),
-                "max_drawdown_percent_95": float(max_drawdown_95 * 100),
+                "var_95_value": float(max(0, initial_value - var_95_val)),
+                "var_99_value": float(max(0, initial_value - var_99_val)),
+                "cvar_95_value": float(max(0, initial_value - cvar_95_val)),
+                "max_drawdown_percent_median": float(drawdown_stats["median_max_drawdown"] * 100),
+                "max_drawdown_percent_95": float(drawdown_stats["p95_max_drawdown"] * 100),
                 "prob_loss_0": float(prob_loss_0),
                 "prob_loss_10": float(prob_loss_10),
                 "prob_loss_20": float(prob_loss_20),
-                "best_case": float(best_case),
-                "worst_case": float(worst_case),
-                "median_case": float(median_case),
+                "best_case": float(np.max(final_values)),
+                "worst_case": float(np.min(final_values)),
+                "median_case": float(np.median(final_values)),
                 "risk_label": risk_label,
                 "risk_color": risk_color
+            },
+            "convergence": {
+                "path_counts": convergence_diag["path_counts"].tolist(),
+                "running_means": convergence_diag["running_means"].tolist(),
+                "ci_lower": convergence_diag["ci_lower"].tolist(),
+                "ci_upper": convergence_diag["ci_upper"].tolist()
             },
             "simulation": {
                 "initial_value": initial_value,
@@ -229,7 +298,7 @@ def run_stress_test(portfolio: PortfolioInput):
                 "sample_paths": paths_for_ui
             }
         }
-        
+
     except Exception as e:
         import traceback
         traceback.print_exc()
