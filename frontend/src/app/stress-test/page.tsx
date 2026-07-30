@@ -400,7 +400,10 @@ export default function StressTestPage() {
               </div>
               
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-                <h3 className="text-base font-bold text-gray-800 mb-1">Risk of Big Drop (20%+ Fall)</h3>
+                <h3 className="text-base font-bold text-gray-800 mb-1 flex items-center">
+                  Risk of Big Drop (20%+ Fall)
+                  <HelpTooltip text="Probability of experiencing a severe portfolio crash of 20% or more over 30 days." />
+                </h3>
                 <div className="flex items-baseline gap-2 mb-2">
                   <span className="text-3xl font-black text-red-600">{data.risk_metrics.prob_loss_20.toFixed(1)}%</span>
                   <span className="text-xs text-gray-500 font-semibold">chance of 20%+ crash</span>
@@ -420,18 +423,21 @@ export default function StressTestPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600 flex items-center">
                       <span className="w-2 h-2 rounded-full bg-gray-400 mr-1.5"></span> Any Loss:
+                      <HelpTooltip text="Probability of finishing the 30-day period below your initial capital." />
                     </span>
                     <span className="font-bold text-gray-800">{data.risk_metrics.prob_loss_0.toFixed(1)}%</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600 flex items-center">
                       <span className="w-2 h-2 rounded-full bg-amber-500 mr-1.5"></span> 10%+ Moderate Drop:
+                      <HelpTooltip text="Probability of suffering a portfolio value decline of 10% or more." />
                     </span>
                     <span className="font-bold text-amber-600">{data.risk_metrics.prob_loss_10.toFixed(1)}%</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600 flex items-center">
                       <span className="w-2 h-2 rounded-full bg-red-600 mr-1.5"></span> 20%+ Big Crash:
+                      <HelpTooltip text="Probability of suffering a severe portfolio value decline of 20% or more." />
                     </span>
                     <span className="font-bold text-red-600">{data.risk_metrics.prob_loss_20.toFixed(1)}%</span>
                   </div>
