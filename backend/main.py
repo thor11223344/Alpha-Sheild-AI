@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routes import anomaly, manipulation, portfolio, ipo, stocks
 
 app = FastAPI(
-    title="MarketGuard AI API",
+    title="AlphaSheild AI API",
     description="Integrated Market Intelligence & Risk Analysis Platform for NSE",
     version="1.0.0"
 )
@@ -25,4 +25,4 @@ app.include_router(stocks.router, prefix="/api/stocks", tags=["Stocks"])
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to MarketGuard AI API"}
+    return {"message": "Welcome to AlphaSheild AI API"}

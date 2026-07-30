@@ -9,7 +9,7 @@ export default function Home() {
           <Shield className="w-16 h-16 text-indigo-600" />
         </div>
         <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl">
-          Welcome to MarketGuard AI
+          Welcome to AlphaSheild AI
         </h1>
         <p className="mt-4 text-xl text-gray-500 max-w-3xl mx-auto">
           An integrated market intelligence and risk analysis platform tailored for the Indian Stock Market (NSE).

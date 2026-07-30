@@ -1,8 +1,9 @@
-# MarketGuard AI 🛡️📈
+# AlphaSheild AI 🛡️📈
 
-**Integrated Market Intelligence & Risk Analysis Platform for the Indian Stock Market (NSE)**
+An integrated, professional market intelligence and risk analysis platform tailored for the Indian Stock Market (NSE).
 
-MarketGuard AI is a comprehensive, full-stack web application designed for analyzing NSE stocks using advanced Machine Learning techniques. This project focuses on actionable market intelligence, shifting away from standard CRUD operations towards real-world quantitative analysis and risk assessment.
+## Overview
+AlphaSheild AI is a comprehensive, full-stack web application designed for analyzing NSE stocks using advanced Machine Learning techniques. This project focuses on actionable market intelligence, shifting away from standard CRUD operations towards real-world quantitative analysis and risk assessment.
 
 ---
 

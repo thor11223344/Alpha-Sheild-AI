@@ -6,7 +6,7 @@ import { Sidebar } from "@/components/Sidebar";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "MarketGuard AI",
+  title: "AlphaSheild AI",
   description: "Integrated Market Intelligence & Risk Analysis Platform",
 };
 

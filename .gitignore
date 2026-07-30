@@ -1,3 +1,27 @@
-
-backend/marketguard.db
+# Byte-compiled / optimized / DLL files
 __pycache__/
+*.py[cod]
+*$py.class
+
+# Python Virtual Environments
+venv/
+ENV/
+env/
+
+# Database files
+*.db
+backend/*.db
+
+# Node dependencies and build files
+node_modules/
+frontend/node_modules/
+.next/
+frontend/.next/
+out/
+build/
+
+# IDE / OS files
+.DS_Store
+.vscode/
+.idea/
+*.log

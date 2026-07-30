@@ -47,7 +47,7 @@ export const Sidebar = () => {
                 <Link href="/" className="flex items-center pl-3 mb-14">
                     <Shield className="w-8 h-8 mr-2 text-indigo-500" />
                     <h1 className="text-2xl font-bold">
-                        MarketGuard AI
+                        AlphaSheild AI
                     </h1>
                 </Link>
                 <div className="space-y-1">
