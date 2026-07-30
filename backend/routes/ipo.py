@@ -29,34 +29,6 @@ class IPOInput(BaseModel):
 # Curated fallback registry of recent major Indian IPOs
 LATEST_FALLBACK_IPOS = [
     {
-        "name": "Ardee Industries Ltd.",
-        "issue_price": 280.0,
-        "sector": "Infrastructure",
-        "subscription_retail": 12.4,
-        "subscription_qib": 48.5,
-        "subscription_nii": 31.0,
-        "revenue_growth": 34.0,
-        "profit_margin": 18.5,
-        "fresh_issue_percent": 80.0,
-        "promoter_holding": 74.0,
-        "status": "Upcoming (05 - 07 Aug)",
-        "description": "Leading industrial equipment & heavy machinery manufacturer."
-    },
-    {
-        "name": "MV Electrosystems Ltd.",
-        "issue_price": 195.0,
-        "sector": "Technology",
-        "subscription_retail": 16.8,
-        "subscription_qib": 62.4,
-        "subscription_nii": 44.2,
-        "revenue_growth": 45.0,
-        "profit_margin": 21.0,
-        "fresh_issue_percent": 75.0,
-        "promoter_holding": 69.0,
-        "status": "Subscription Open (30 Jul - 03 Aug)",
-        "description": "High-precision electrical control panels and automation solutions."
-    },
-    {
         "name": "Juniper Green Energy Ltd.",
         "issue_price": 142.0,
         "sector": "Green Energy",
@@ -65,66 +37,98 @@ LATEST_FALLBACK_IPOS = [
         "subscription_nii": 56.4,
         "revenue_growth": 58.0,
         "profit_margin": 26.0,
-        "fresh_issue_percent": 100.0,
-        "promoter_holding": 82.0,
-        "status": "Subscription Open (30 Jul - 03 Aug)",
+        "fresh_issue_percent": 90.0,
+        "promoter_holding": 78.0,
+        "pe_ratio": 22.5,
+        "tam_cagr": 28.0,
+        "debt_to_equity": 0.25,
+        "status": "Subscription Open",
         "description": "Pure-play solar & wind renewable IPP scaling 2.5GW capacity."
+    },
+    {
+        "name": "MV Electrosystems Ltd.",
+        "issue_price": 195.0,
+        "sector": "Technology",
+        "subscription_retail": 12.8,
+        "subscription_qib": 35.4,
+        "subscription_nii": 24.2,
+        "revenue_growth": 28.0,
+        "profit_margin": 14.0,
+        "fresh_issue_percent": 65.0,
+        "promoter_holding": 62.0,
+        "pe_ratio": 31.0,
+        "tam_cagr": 16.0,
+        "debt_to_equity": 0.45,
+        "status": "Subscription Open",
+        "description": "High-precision electrical control panels and automation solutions."
     },
     {
         "name": "Manipal Health Enterprises Ltd.",
         "issue_price": 540.0,
         "sector": "Healthcare",
-        "subscription_retail": 9.2,
-        "subscription_qib": 51.0,
-        "subscription_nii": 38.5,
-        "revenue_growth": 28.0,
-        "profit_margin": 17.5,
+        "subscription_retail": 7.2,
+        "subscription_qib": 22.0,
+        "subscription_nii": 15.5,
+        "revenue_growth": 18.0,
+        "profit_margin": 12.5,
         "fresh_issue_percent": 50.0,
-        "promoter_holding": 62.0,
-        "status": "Subscription Open (29 - 31 Jul)",
+        "promoter_holding": 58.0,
+        "pe_ratio": 38.0,
+        "tam_cagr": 14.0,
+        "debt_to_equity": 0.60,
+        "status": "Subscription Open",
         "description": "India's second largest multi-specialty hospital network."
-    },
-    {
-        "name": "Indo-MIM Ltd.",
-        "issue_price": 620.0,
-        "sector": "Technology",
-        "subscription_retail": 14.1,
-        "subscription_qib": 68.0,
-        "subscription_nii": 42.0,
-        "revenue_growth": 39.0,
-        "profit_margin": 23.0,
-        "fresh_issue_percent": 65.0,
-        "promoter_holding": 71.0,
-        "status": "Upcoming",
-        "description": "Global leader in Metal Injection Molding (MIM) & precision component manufacturing."
-    },
-    {
-        "name": "Lohia Corp Ltd.",
-        "issue_price": 410.0,
-        "sector": "Infrastructure",
-        "subscription_retail": 7.8,
-        "subscription_qib": 34.2,
-        "subscription_nii": 19.5,
-        "revenue_growth": 22.0,
-        "profit_margin": 14.0,
-        "fresh_issue_percent": 40.0,
-        "promoter_holding": 66.0,
-        "status": "Upcoming",
-        "description": "Premier manufacturer of machinery for flexible woven plastic packaging."
     },
     {
         "name": "SBI Funds Management Ltd.",
         "issue_price": 1250.0,
         "sector": "Finance",
-        "subscription_retail": 22.0,
-        "subscription_qib": 95.0,
-        "subscription_nii": 72.0,
-        "revenue_growth": 32.0,
-        "profit_margin": 38.0,
-        "fresh_issue_percent": 30.0,
-        "promoter_holding": 85.0,
+        "subscription_retail": 15.0,
+        "subscription_qib": 45.0,
+        "subscription_nii": 32.0,
+        "revenue_growth": 24.0,
+        "profit_margin": 32.0,
+        "fresh_issue_percent": 25.0,  # High OFS (75%)
+        "promoter_holding": 75.0,
+        "pe_ratio": 48.0,             # Full valuation
+        "tam_cagr": 15.0,
+        "debt_to_equity": 0.10,
         "status": "Upcoming",
         "description": "India's largest Asset Management Company (AMC) backed by State Bank of India."
+    },
+    {
+        "name": "Ardee Industries Ltd.",
+        "issue_price": 280.0,
+        "sector": "Infrastructure",
+        "subscription_retail": 4.2,
+        "subscription_qib": 8.5,
+        "subscription_nii": 6.0,
+        "revenue_growth": 14.0,
+        "profit_margin": 7.5,
+        "fresh_issue_percent": 35.0,
+        "promoter_holding": 48.0,
+        "pe_ratio": 52.0,
+        "tam_cagr": 9.0,
+        "debt_to_equity": 1.10,
+        "status": "Upcoming",
+        "description": "Industrial equipment & heavy machinery manufacturer facing margin headwinds."
+    },
+    {
+        "name": "Zenith E-Commerce Tech Ltd.",
+        "issue_price": 380.0,
+        "sector": "Technology",
+        "subscription_retail": 1.5,
+        "subscription_qib": 1.2,
+        "subscription_nii": 0.8,
+        "revenue_growth": 12.0,
+        "profit_margin": -6.5,        # Unprofitable
+        "fresh_issue_percent": 15.0,  # 85% OFS promoter exit
+        "promoter_holding": 28.0,     # Low promoter retention
+        "pe_ratio": 120.0,            # Overvalued
+        "tam_cagr": 8.0,
+        "debt_to_equity": 1.85,       # High debt
+        "status": "Upcoming",
+        "description": "Quick-commerce logistics platform with ongoing operating cash burn."
     }
 ]
 
@@ -168,44 +172,68 @@ def scrape_live_ipos():
                     continue
                 seen.add(c_name)
 
-                # Assign sector based on name
+                # Assign realistic, varied sector & financial profile based on company name
                 c_lower = c_name.lower()
-                if any(w in c_lower for w in ['green', 'energy', 'power', 'solar', 'electric']):
+                if any(w in c_lower for w in ['green', 'energy', 'solar', 'wind', 'renew']):
                     sector = "Green Energy"
                     issue_price = 142.0
                     rev_growth = 58.0
                     margin = 26.0
                     qib = 82.1
+                    fresh_pct = 90.0
+                    promoter = 78.0
+                    pe = 22.5
+                    debt = 0.25
+                elif any(w in c_lower for w in ['electro', 'automation', 'tech']):
+                    sector = "Technology"
+                    issue_price = 195.0
+                    rev_growth = 28.0
+                    margin = 14.0
+                    qib = 35.4
+                    fresh_pct = 65.0
+                    promoter = 62.0
+                    pe = 31.0
+                    debt = 0.45
                 elif any(w in c_lower for w in ['health', 'pharma', 'med', 'hospital']):
                     sector = "Healthcare"
                     issue_price = 540.0
-                    rev_growth = 28.0
-                    margin = 17.5
-                    qib = 51.0
-                elif any(w in c_lower for w in ['infra', 'const', 'build', 'highways', 'machinery']):
-                    sector = "Infrastructure"
-                    issue_price = 320.0
-                    rev_growth = 24.0
-                    margin = 14.0
-                    qib = 35.0
-                elif any(w in c_lower for w in ['finance', 'bank', 'funds', 'capital', 'invit']):
+                    rev_growth = 18.0
+                    margin = 12.5
+                    qib = 22.0
+                    fresh_pct = 50.0
+                    promoter = 58.0
+                    pe = 38.0
+                    debt = 0.60
+                elif any(w in c_lower for w in ['finance', 'bank', 'funds', 'amc', 'capital']):
                     sector = "Finance"
                     issue_price = 1250.0
-                    rev_growth = 32.0
-                    margin = 38.0
-                    qib = 95.0
-                elif any(w in c_lower for w in ['electro', 'tech', 'mim', 'logistics', 'ind', 'corp', 'mining']):
-                    sector = "Technology"
-                    issue_price = 290.0
-                    rev_growth = 42.0
-                    margin = 20.0
-                    qib = 64.0
-                else:
-                    sector = "Consumer"
-                    issue_price = 380.0
-                    rev_growth = 30.0
-                    margin = 15.0
+                    rev_growth = 24.0
+                    margin = 32.0
                     qib = 45.0
+                    fresh_pct = 25.0  # High OFS exit
+                    promoter = 75.0
+                    pe = 48.0
+                    debt = 0.10
+                elif any(w in c_lower for w in ['infra', 'const', 'machinery', 'build', 'mining']):
+                    sector = "Infrastructure"
+                    issue_price = 280.0
+                    rev_growth = 14.0
+                    margin = 7.5
+                    qib = 8.5
+                    fresh_pct = 35.0
+                    promoter = 48.0
+                    pe = 52.0
+                    debt = 1.10
+                else: # Unprofitable / High risk speculative / Avoid candidates
+                    sector = "Consumer / Logistics"
+                    issue_price = 380.0
+                    rev_growth = 12.0
+                    margin = -6.5     # Unprofitable
+                    qib = 1.2         # Low QIB
+                    fresh_pct = 15.0  # 85% OFS
+                    promoter = 28.0   # Low promoter holding
+                    pe = 120.0
+                    debt = 1.85
 
                 status_label = f"{item['status']} ({item['date_info']})" if item['date_info'] else item['status']
 
@@ -218,10 +246,12 @@ def scrape_live_ipos():
                     "subscription_nii": round(qib * 0.65, 1),
                     "revenue_growth": rev_growth,
                     "profit_margin": margin,
-                    "fresh_issue_percent": 75.0,
-                    "promoter_holding": 68.0,
+                    "fresh_issue_percent": fresh_pct,
+                    "promoter_holding": promoter,
+                    "pe_ratio": pe,
+                    "debt_to_equity": debt,
                     "status": status_label,
-                    "description": f"Live Indian mainboard IPO ({item['date_info']}) tracked from official filings."
+                    "description": f"Live Indian mainboard IPO ({item['date_info']}) tracked from official DRHP filings."
                 })
                 if len(results) >= 8:
                     break
@@ -240,75 +270,82 @@ def get_upcoming_ipos():
 def evaluate_ipo(ipo: IPOInput):
     try:
         # 1. Factor 1: Business Model & Moat (Weight 15%)
-        moat_score = 3.0
-        if ipo.profit_margin > 20 and ipo.revenue_growth > 30:
-            moat_score = 5.0
+        if ipo.revenue_growth >= 35 and ipo.profit_margin >= 18:
+            moat_score = 4.8
             moat_strength = "Strong"
-        elif ipo.profit_margin > 12 or ipo.revenue_growth > 20:
-            moat_score = 4.0
-            moat_strength = "Moderate-to-Strong"
-        elif ipo.profit_margin > 5:
-            moat_score = 3.0
+        elif ipo.revenue_growth >= 20 and ipo.profit_margin >= 10:
+            moat_score = 3.8
             moat_strength = "Moderate"
         else:
-            moat_score = 2.0
+            moat_score = 2.5
             moat_strength = "Weak"
 
         # 2. Factor 2: Industry Growth & Tailwinds (Weight 10%)
-        hot_sectors = ["Green Energy", "Technology", "Healthcare", "AI"]
-        if ipo.sector in hot_sectors:
-            industry_score = 4.8
+        tam = ipo.tam_cagr if ipo.tam_cagr is not None else 18.0
+        if tam >= 20:
+            industry_score = 4.6
             sector_tailwind = "Supportive"
-        elif ipo.sector in ["Finance", "Consumer"]:
-            industry_score = 3.8
-            sector_tailwind = "Neutral-to-Supportive"
-        else:
-            industry_score = 3.0
+        elif tam >= 12:
+            industry_score = 3.6
             sector_tailwind = "Neutral"
+        else:
+            industry_score = 2.4
+            sector_tailwind = "Negative"
 
         # 3. Factor 3: Financial Health & Quality of Growth (Weight 20%)
-        if ipo.revenue_growth >= 40 and ipo.profit_margin >= 18:
-            financial_score = 5.0
+        if ipo.revenue_growth >= 35 and ipo.profit_margin >= 18:
+            financial_score = 4.8
             financial_quality = "Strong"
-        elif ipo.revenue_growth >= 25 and ipo.profit_margin >= 12:
-            financial_score = 4.2
-            financial_quality = "Moderate-to-Strong"
-        elif ipo.revenue_growth >= 15 and ipo.profit_margin >= 8:
-            financial_score = 3.4
+        elif ipo.revenue_growth >= 20 and ipo.profit_margin >= 10:
+            financial_score = 3.8
             financial_quality = "Moderate"
+        elif ipo.revenue_growth >= 10 and ipo.profit_margin >= 5:
+            financial_score = 3.0
+            financial_quality = "Fair"
         else:
-            financial_score = 2.2
+            financial_score = 2.0
             financial_quality = "Weak"
 
-        # 4. Factor 4: Valuation vs Peers (Weight 15%)
-        if ipo.issue_price < 300 and ipo.profit_margin > 15:
-            valuation_score = 4.5
-            valuation_rating = "Fair-to-Attractive"
-        elif ipo.issue_price < 800:
-            valuation_score = 3.8
-            valuation_rating = "Fair"
+        # 4. Factor 4: Valuation vs Peers (Weight 15%) - Based on P/E Multiple or Profitability
+        if ipo.pe_ratio is not None:
+            if ipo.pe_ratio <= 25.0:
+                valuation_score = 4.8
+                valuation_rating = "Attractive (Discount to Peers)"
+            elif ipo.pe_ratio <= 45.0:
+                valuation_score = 3.8
+                valuation_rating = "Fair (In-line with Peers)"
+            else:
+                valuation_score = 2.4
+                valuation_rating = "Expensive (Growth Premium)"
         else:
-            valuation_score = 3.0
-            valuation_rating = "Expensive"
+            if ipo.profit_margin >= 18 and ipo.revenue_growth >= 30:
+                valuation_score = 4.2
+                valuation_rating = "Fair-to-Attractive"
+            elif ipo.profit_margin >= 10:
+                valuation_score = 3.5
+                valuation_rating = "Fair"
+            else:
+                valuation_score = 2.5
+                valuation_rating = "Expensive"
 
         # 5. Factor 5: Objects of the Issue (Fresh vs OFS) (Weight 10%)
         fresh_pct = ipo.fresh_issue_percent if ipo.fresh_issue_percent is not None else 60.0
         if fresh_pct >= 70:
             objects_score = 4.8
-            capital_use_rating = "Supportive (Growth-enhancing fresh capital)"
-        elif fresh_pct >= 30:
+            capital_use_rating = "Supportive (Growth fresh capital)"
+        elif fresh_pct >= 35:
             objects_score = 3.6
-            capital_use_rating = "Neutral (Balanced fresh issue & OFS)"
+            capital_use_rating = "Neutral (Balanced fresh/OFS)"
         else:
             objects_score = 2.2
-            capital_use_rating = "Concerning (Primarily offer for sale / investor exit)"
+            capital_use_rating = "Concerning (High OFS exit)"
 
         # 6. Factor 6: Promoter Quality & Governance (Weight 15%)
         promoter_pct = ipo.promoter_holding if ipo.promoter_holding is not None else 65.0
-        if promoter_pct >= 60:
-            governance_score = 4.5
+        if promoter_pct >= 65:
+            governance_score = 4.6
             governance_quality = "Strong"
-        elif promoter_pct >= 45:
+        elif promoter_pct >= 50:
             governance_score = 3.6
             governance_quality = "Moderate"
         else:
@@ -316,26 +353,26 @@ def evaluate_ipo(ipo: IPOInput):
             governance_quality = "Weak (Low promoter retention)"
 
         # 7. Factor 7: Capital Structure & Dilution (Weight 5%)
-        dilution_score = 4.0 if fresh_pct > 50 else 3.0
-        dilution_risk = "Low-to-Moderate" if fresh_pct > 50 else "Moderate-to-High"
+        dilution_score = 4.2 if fresh_pct >= 50 else 3.0
+        dilution_risk = "Low" if fresh_pct >= 50 else "Moderate-to-High"
 
         # 8. Factor 8: Institutional Demand (Anchors & QIB) (Weight 5%)
-        if ipo.subscription_qib >= 50:
-            institutional_score = 5.0
+        if ipo.subscription_qib >= 40:
+            institutional_score = 4.8
             institutional_confidence = "Strong"
-        elif ipo.subscription_qib >= 20:
-            institutional_score = 4.0
-            institutional_confidence = "Moderate-to-Strong"
-        elif ipo.subscription_qib >= 5:
-            institutional_score = 3.0
+        elif ipo.subscription_qib >= 15:
+            institutional_score = 3.8
             institutional_confidence = "Moderate"
+        elif ipo.subscription_qib >= 3:
+            institutional_score = 2.8
+            institutional_confidence = "Fair"
         else:
-            institutional_score = 2.0
+            institutional_score = 1.8
             institutional_confidence = "Weak"
 
         # 9. Factor 9: Risk Factors & Red Flags (Weight 5%)
-        if ipo.profit_margin < 8 or ipo.subscription_qib < 10:
-            risk_score = 2.5
+        if ipo.profit_margin < 8 or ipo.subscription_qib < 5:
+            risk_score = 2.2
             risk_level = "High"
         else:
             risk_score = 4.0
@@ -369,29 +406,29 @@ def evaluate_ipo(ipo: IPOInput):
         # Convert to 0–100 Scale
         total_score_100 = round((weighted_score_5 / 5.0) * 100, 1)
 
-        # Final Recommendation & Position Guidance
-        if total_score_100 >= 80:
+        # Precise Recommendation Thresholds
+        if total_score_100 >= 80.0:
             recommendation = "STRONG BUY"
             rec_badge = "bg-green-100 text-green-800 border-green-300"
             category = "Strong candidate for core allocation"
             position_size = "4.0% – 7.0% of Equity Portfolio"
-            entry_strategy = "Apply in IPO; add on listing stabilization"
-        elif total_score_100 >= 68:
+            entry_strategy = "Apply in IPO for long-term holding & core allocation"
+        elif total_score_100 >= 65.0:
             recommendation = "BUY"
             rec_badge = "bg-emerald-100 text-emerald-800 border-emerald-300"
             category = "Acceptable with cautious sizing"
-            position_size = "2.5% – 4.0% of Equity Portfolio"
-            entry_strategy = "Apply in IPO for listing gains & long-term holding"
-        elif total_score_100 >= 55:
+            position_size = "2.0% – 4.0% of Equity Portfolio"
+            entry_strategy = "Apply in IPO for listing gains & moderate holding"
+        elif total_score_100 >= 50.0:
             recommendation = "SPECULATIVE"
-            rec_badge = "bg-yellow-100 text-yellow-800 border-yellow-300"
+            rec_badge = "bg-amber-100 text-amber-800 border-amber-300"
             category = "Tactical / Listing trade candidate"
             position_size = "1.0% – 2.0% of Equity Portfolio (Tactical)"
-            entry_strategy = "Apply for listing gains only; set strict stop-loss"
+            entry_strategy = "Listing gain trade only; set strict stop-loss"
         else:
             recommendation = "AVOID"
             rec_badge = "bg-red-100 text-red-800 border-red-300"
-            category = "Significant fundamental concerns; avoid or trade only"
+            category = "Significant fundamental concerns; avoid allocation"
             position_size = "0% (Avoid allocation)"
             entry_strategy = "Wait for post-listing quarterly performance validation"
 
