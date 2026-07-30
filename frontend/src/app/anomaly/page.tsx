@@ -65,6 +65,8 @@ export default function AnomalyPage() {
   const [freestyleDraft, setFreestyleDraft] = useState<{ date1: string; price1: number; date2: string; price2: number } | null>(null);
   const [manualPrice, setManualPrice] = useState<string>("");
 
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+
   const fetchData = async () => {
     const cleanTicker = ticker.toUpperCase().replace(/\.NS$/i, "");
     setLoading(true);
@@ -99,15 +101,45 @@ export default function AnomalyPage() {
     setManualPrice("");
   };
 
-  // 100% Accurate Recharts Click Handler with Automatic Price/Date Snapping
-  const handleRechartsClick = (chartState: any) => {
-    if (!chartState || drawMode === "pointer") return;
+  // Universal Click Handler for Horizontal & Freestyle drawing (Data points + Blank whitespace)
+  const handleChartClick = (chartState: any, mouseEvent?: React.MouseEvent<HTMLDivElement>) => {
+    if (drawMode === "pointer" || !data?.data?.length) return;
 
-    const activeItem = chartState.activePayload?.[0]?.payload;
+    // 1. Try active payload (Exact Candle Snap)
+    const activeItem = chartState?.activePayload?.[0]?.payload;
+
+    let targetPrice: number;
+    let targetDate: string;
+
+    if (activeItem) {
+      targetPrice = roundToTwo(activeItem.close);
+      targetDate = activeItem.date;
+    } else if (mouseEvent && chartContainerRef.current) {
+      // 2. Fallback to pixel coordinate conversion if clicked in empty whitespace
+      const rect = chartContainerRef.current.getBoundingClientRect();
+      const clickY = mouseEvent.clientY - rect.top;
+      const clickX = mouseEvent.clientX - rect.left;
+
+      const prices = data.data.map((d: any) => d.close);
+      const minP = Math.min(...prices);
+      const maxP = Math.max(...prices);
+      const range = maxP - minP || 1;
+
+      // Adjust for chart container margins (top: 15px, bottom: 25px)
+      const plotH = rect.height - 40;
+      const relY = Math.max(0, Math.min(1, (clickY - 15) / plotH));
+      targetPrice = roundToTwo(maxP - relY * range);
+
+      // Map X to nearest date
+      const plotW = rect.width - 50;
+      const relX = Math.max(0, Math.min(1, (clickX - 25) / plotW));
+      const idx = Math.floor(relX * (data.data.length - 1));
+      targetDate = data.data[Math.max(0, Math.min(data.data.length - 1, idx))]?.date || data.data[0].date;
+    } else {
+      return;
+    }
 
     if (drawMode === "horizontal") {
-      if (!activeItem) return;
-      const targetPrice = roundToTwo(activeItem.close);
       setHorizontalLines((prev) => [
         ...prev,
         {
@@ -118,9 +150,8 @@ export default function AnomalyPage() {
         }
       ]);
     } else if (drawMode === "freestyle") {
-      if (!activeItem) return;
       if (!freestyleStart) {
-        setFreestyleStart({ date: activeItem.date, price: activeItem.close });
+        setFreestyleStart({ date: targetDate, price: targetPrice });
       } else {
         setFreestyleLines((prev) => [
           ...prev,
@@ -128,8 +159,8 @@ export default function AnomalyPage() {
             id: Math.random().toString(),
             date1: freestyleStart.date,
             price1: freestyleStart.price,
-            date2: activeItem.date,
-            price2: activeItem.close,
+            date2: targetDate,
+            price2: targetPrice,
             color: lineColor
           }
         ]);
@@ -149,6 +180,27 @@ export default function AnomalyPage() {
         price2: activeItem.close
       });
     }
+  };
+
+  // Quick Preset Adders
+  const addHighResistanceLine = () => {
+    if (!data?.data?.length) return;
+    const prices = data.data.map((d: any) => d.close);
+    const maxP = roundToTwo(Math.max(...prices));
+    setHorizontalLines((prev) => [
+      ...prev,
+      { id: Math.random().toString(), price: maxP, color: "#ef4444", label: "Resistance (Period High)" }
+    ]);
+  };
+
+  const addLowSupportLine = () => {
+    if (!data?.data?.length) return;
+    const prices = data.data.map((d: any) => d.close);
+    const minP = roundToTwo(Math.min(...prices));
+    setHorizontalLines((prev) => [
+      ...prev,
+      { id: Math.random().toString(), price: minP, color: "#10b981", label: "Support (Period Low)" }
+    ]);
   };
 
   const roundToTwo = (val: number) => Math.round(val * 100) / 100;
@@ -285,6 +337,22 @@ export default function AnomalyPage() {
                   ))}
                 </div>
 
+                {/* Quick High/Low Presets */}
+                <div className="flex items-center gap-1 pl-2 border-l border-gray-300">
+                  <button
+                    onClick={addHighResistanceLine}
+                    className="px-2 py-1 bg-red-50 text-red-700 border border-red-200 rounded text-[11px] font-bold hover:bg-red-100 transition whitespace-nowrap"
+                  >
+                    + High (Resistance)
+                  </button>
+                  <button
+                    onClick={addLowSupportLine}
+                    className="px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[11px] font-bold hover:bg-emerald-100 transition whitespace-nowrap"
+                  >
+                    + Low (Support)
+                  </button>
+                </div>
+
                 {/* Manual Price Level Input */}
                 <div className="flex items-center gap-1 pl-2 border-l border-gray-300">
                   <input
@@ -318,7 +386,7 @@ export default function AnomalyPage() {
             {drawMode !== "pointer" && (
               <div className="bg-sky-50 border border-sky-200 text-sky-800 text-xs px-4 py-2 rounded-lg flex justify-between items-center">
                 <span>
-                  {drawMode === "horizontal" && "🎯 Click any candle on the graph (or type exact price above) to snap a Horizontal Support/Resistance line to that exact Closing Price."}
+                  {drawMode === "horizontal" && "🎯 Click anywhere on the chart (or use inputs above) to place a Horizontal Support/Resistance line."}
                   {drawMode === "freestyle" && (freestyleStart ? `🎯 Click Point 2 (End Date & Price) to complete trendline starting from ${freestyleStart.date} (₹${freestyleStart.price}).` : "🎯 Click Point 1 (Start Date & Price) on the chart line to begin drawing freestyle trendline.")}
                 </span>
                 <button onClick={() => { setDrawMode("pointer"); setFreestyleStart(null); setFreestyleDraft(null); }} className="text-sky-600 hover:text-sky-900 font-bold text-xs underline">
@@ -328,12 +396,16 @@ export default function AnomalyPage() {
             )}
 
             {/* Interactive Chart Container */}
-            <div className={`h-[480px] relative rounded-xl transition ${drawMode !== "pointer" ? "cursor-crosshair ring-2 ring-sky-400" : ""}`}>
+            <div 
+              ref={chartContainerRef}
+              onClick={(e) => handleChartClick(null, e)}
+              className={`h-[480px] relative rounded-xl transition ${drawMode !== "pointer" ? "cursor-crosshair ring-2 ring-sky-400" : ""}`}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart 
                   data={data.data} 
                   margin={{ top: 15, right: 25, left: 15, bottom: 25 }}
-                  onClick={handleRechartsClick}
+                  onClick={(state) => handleChartClick(state)}
                   onMouseMove={handleRechartsMouseMove}
                 >
                   <CartesianGrid strokeDasharray="3 3" opacity={0.2} vertical={false} />
