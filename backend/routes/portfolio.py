@@ -187,21 +187,24 @@ def run_stress_test(portfolio: PortfolioInput):
                 states[t] = next_states
                 curr_states = next_states
 
+            states_paths_first = states.T  # Shape: (10000, 30)
+            states_expanded = states_paths_first[:, :, np.newaxis]  # Shape: (10000, 30, 1)
+
             # Generate Shocks using engine Sampler (Sobol or Antithetic)
             engine = MonteCarloEngine(sim_config)
-            Z = engine.sampler.generate_shocks(num_simulations, forecast_days, num_assets, seed=42)
+            Z = engine.sampler.generate_shocks(num_simulations, forecast_days, num_assets, seed=42)  # Shape: (10000, 30, num_assets)
             
-            returns_0 = drift_0 + Z @ L_0.T
-            returns_1 = drift_1 + Z @ L_1.T
+            returns_0 = drift_0 + Z @ L_0.T  # Shape: (10000, 30, num_assets)
+            returns_1 = drift_1 + Z @ L_1.T  # Shape: (10000, 30, num_assets)
             
-            states_expanded = states[:, :, np.newaxis]
-            daily_asset_returns = np.where(states_expanded == 0, returns_0, returns_1)
+            daily_asset_returns = np.where(states_expanded == 0, returns_0, returns_1)  # Shape: (10000, 30, num_assets)
             
-            daily_port_returns = daily_asset_returns @ weights
-            price_paths_sim = initial_value * np.cumprod(1 + daily_port_returns, axis=0)
+            daily_port_returns = daily_asset_returns @ weights  # Shape: (10000, 30)
+            price_paths_sim = initial_value * np.cumprod(1 + daily_port_returns, axis=1)  # Shape: (10000, 30)
             
-            initial_row = np.full((1, num_simulations), initial_value)
-            price_paths = np.vstack([initial_row, price_paths_sim])
+            initial_col = np.full((num_simulations, 1), initial_value)
+            price_paths_matrix = np.hstack([initial_col, price_paths_sim])  # Shape: (10000, 31)
+            price_paths = price_paths_matrix.T  # Shape: (31, 10000)
 
         # 6. Advanced Analytics & Summary Metrics
         final_values = price_paths[-1, :]
