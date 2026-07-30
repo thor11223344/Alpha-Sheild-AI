@@ -31,7 +31,6 @@ export default function StressTestPage() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState("");
-  const [showTechDetails, setShowTechDetails] = useState(false);
   
   const [initialValue, setInitialValue] = useState<number>(100000);
   const [modelType, setModelType] = useState<string>("regime_switching");
@@ -441,56 +440,46 @@ export default function StressTestPage() {
             </div>
           </div>
 
-          {/* Technical Diagnostics Accordion */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-            <button 
-              onClick={() => setShowTechDetails(!showTechDetails)}
-              className="w-full px-6 py-3.5 flex items-center justify-between text-left focus:outline-none hover:bg-gray-50 transition"
-            >
-              <div className="flex items-center text-gray-800 text-sm font-bold">
-                <span className="mr-2">🔬</span> Technical Numerical Diagnostics
-              </div>
-              {showTechDetails ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
-            </button>
+          {/* Technical Diagnostics Card (Always Visible) */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center text-gray-800 text-sm font-bold mb-4 pb-3 border-b border-gray-100">
+              <span className="mr-2">🔬</span> Technical Numerical Diagnostics
+            </div>
             
-            {showTechDetails && (
-              <div className="px-6 pb-6 pt-3 border-t border-gray-100">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-xs">
-                  <div>
-                    <span className="text-gray-500 uppercase font-semibold block mb-0.5">Stochastic Process</span>
-                    <span className="font-bold text-gray-900">{data.model_metadata?.model_used}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 uppercase font-semibold block mb-0.5">Sampler Method</span>
-                    <span className="font-bold text-blue-600">{data.model_metadata?.sampler_used}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 uppercase font-semibold block mb-0.5">Standard Error (SE)</span>
-                    <span className="font-bold text-gray-900">₹{data.model_metadata?.standard_error?.toFixed(2)}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 uppercase font-semibold block mb-0.5">95% Mean Band</span>
-                    <span className="font-bold text-green-600">₹{Math.round(data.model_metadata?.ci_95_lower).toLocaleString()} – ₹{Math.round(data.model_metadata?.ci_95_upper).toLocaleString()}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 uppercase font-semibold block mb-0.5">Skewness</span>
-                    <span className="font-bold text-gray-900">{data.model_metadata?.skewness?.toFixed(3)}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 uppercase font-semibold block mb-0.5">Excess Kurtosis</span>
-                    <span className="font-bold text-gray-900">{data.model_metadata?.kurtosis?.toFixed(3)}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 uppercase font-semibold block mb-0.5">Max Drawdown (95%)</span>
-                    <span className="font-bold text-red-600">-{data.risk_metrics.max_drawdown_percent_95.toFixed(2)}%</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 uppercase font-semibold block mb-0.5">VaR 99% (Extreme)</span>
-                    <span className="font-bold text-red-600">-{formatCurrency(data.risk_metrics.var_99_value)}</span>
-                  </div>
-                </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-xs">
+              <div>
+                <span className="text-gray-500 uppercase font-semibold block mb-0.5">Stochastic Process</span>
+                <span className="font-bold text-gray-900">{data.model_metadata?.model_used}</span>
               </div>
-            )}
+              <div>
+                <span className="text-gray-500 uppercase font-semibold block mb-0.5">Sampler Method</span>
+                <span className="font-bold text-blue-600">{data.model_metadata?.sampler_used}</span>
+              </div>
+              <div>
+                <span className="text-gray-500 uppercase font-semibold block mb-0.5">Standard Error (SE)</span>
+                <span className="font-bold text-gray-900">₹{data.model_metadata?.standard_error?.toFixed(2)}</span>
+              </div>
+              <div>
+                <span className="text-gray-500 uppercase font-semibold block mb-0.5">95% Mean Band</span>
+                <span className="font-bold text-green-600">₹{Math.round(data.model_metadata?.ci_95_lower).toLocaleString()} – ₹{Math.round(data.model_metadata?.ci_95_upper).toLocaleString()}</span>
+              </div>
+              <div>
+                <span className="text-gray-500 uppercase font-semibold block mb-0.5">Skewness</span>
+                <span className="font-bold text-gray-900">{data.model_metadata?.skewness?.toFixed(3)}</span>
+              </div>
+              <div>
+                <span className="text-gray-500 uppercase font-semibold block mb-0.5">Excess Kurtosis</span>
+                <span className="font-bold text-gray-900">{data.model_metadata?.kurtosis?.toFixed(3)}</span>
+              </div>
+              <div>
+                <span className="text-gray-500 uppercase font-semibold block mb-0.5">Max Drawdown (95%)</span>
+                <span className="font-bold text-red-600">-{data.risk_metrics.max_drawdown_percent_95.toFixed(2)}%</span>
+              </div>
+              <div>
+                <span className="text-gray-500 uppercase font-semibold block mb-0.5">VaR 99% (Extreme)</span>
+                <span className="font-bold text-red-600">-{formatCurrency(data.risk_metrics.var_99_value)}</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
