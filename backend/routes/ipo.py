@@ -18,6 +18,13 @@ class IPOInput(BaseModel):
     profit_margin: float   # Percentage
     fresh_issue_percent: Optional[float] = 60.0  # Default 60% fresh issue / 40% OFS
     promoter_holding: Optional[float] = 65.0      # Post-IPO promoter holding %
+    business_summary: Optional[str] = None       # One sentence DRHP business model & moat description
+    tam_cagr: Optional[float] = 20.0             # Industry TAM projected CAGR %
+    ebitda_margin: Optional[float] = None        # EBITDA margin %
+    roce: Optional[float] = None                 # Return on Capital Employed %
+    pe_ratio: Optional[float] = None             # P/E multiple relative to peers
+    debt_to_equity: Optional[float] = 0.3        # Debt to Equity ratio
+    risk_summary: Optional[str] = None           # Primary DRHP risk factor
 
 # Curated fallback registry of recent major Indian IPOs
 LATEST_FALLBACK_IPOS = [
@@ -389,28 +396,49 @@ def evaluate_ipo(ipo: IPOInput):
             entry_strategy = "Wait for post-listing quarterly performance validation"
 
         # Structured Institutional Investment Memo Breakdown
+        custom_one_liner = ipo.business_summary if ipo.business_summary else f"{ipo.name} operates in the {ipo.sector} sector, generating revenue through core product & service delivery."
+        tam_text = f"Industry TAM projected at +{ipo.tam_cagr:.1f}% CAGR in India's {ipo.sector} sector." if ipo.tam_cagr else f"Expanding rapidly driven by structural macroeconomic tailwinds in India's {ipo.sector} industry."
+        
+        profit_str = f"PAT Margin: {ipo.profit_margin:.1f}%"
+        if ipo.ebitda_margin is not None:
+            profit_str += f" | EBITDA Margin: {ipo.ebitda_margin:.1f}%"
+        if ipo.roce is not None:
+            profit_str += f" | RoCE: {ipo.roce:.1f}%"
+            
+        pe_str = f"P/E Multiple: {ipo.pe_ratio:.1f}x relative to listed {ipo.sector} peers." if ipo.pe_ratio is not None else f"Valued in line with listed {ipo.sector} peers with growth premium."
+        debt_str = f"Debt to Equity: {ipo.debt_to_equity:.2f} with manageable working capital requirements." if ipo.debt_to_equity is not None else "Healthy debt-to-equity and manageable working capital requirements."
+        
+        risks_list = []
+        if ipo.risk_summary:
+            risks_list.append(f"DRHP Key Risk Flag: {ipo.risk_summary}")
+        risks_list.extend([
+            f"Margin compression risk if raw material / operational input costs escalate.",
+            f"Sectoral competition and pricing pressure from established incumbents.",
+            f"Execution risk associated with aggressive capacity deployment plans."
+        ])
+
         memo = {
             "business_overview_moat": {
-                "one_liner": f"{ipo.name} operates in the {ipo.sector} sector, generating revenue through core product & service delivery.",
+                "one_liner": custom_one_liner,
                 "industry_positioning": f"Positioned as a key player in the {ipo.sector} market with +{ipo.revenue_growth}% YoY growth.",
                 "moat_sources": "Brand equity, operational scale, supply chain integration, and customer retention.",
                 "moat_strength": moat_strength
             },
             "industry_growth_tailwinds": {
-                "industry_trend": f"Expanding rapidly driven by structural macroeconomic tailwinds in India's {ipo.sector} industry.",
+                "industry_trend": tam_text,
                 "competitive_intensity": "Moderate-to-high, requiring continuous innovation and margin discipline.",
                 "sector_tailwind": sector_tailwind
             },
             "financial_health_quality": {
                 "revenue_cagr": f"+{ipo.revenue_growth:.1f}% 3-Year CAGR",
-                "profitability_trend": f"Net profit margin standing at {ipo.profit_margin:.1f}%",
+                "profitability_trend": profit_str,
                 "cash_flow_quality": "Positive operating cash flows supporting organic working capital needs.",
-                "balance_sheet": "Healthy debt-to-equity and manageable working capital requirements.",
+                "balance_sheet": debt_str,
                 "financial_quality": financial_quality
             },
             "valuation_analysis": {
                 "issue_price": f"₹{ipo.issue_price:.2f} per equity share",
-                "peer_comparison": f"Valued in line with listed {ipo.sector} peers with growth premium.",
+                "peer_comparison": pe_str,
                 "valuation_verdict": valuation_rating
             },
             "objects_of_issue": {
@@ -433,11 +461,7 @@ def evaluate_ipo(ipo: IPOInput):
                 "retail_subscription": f"{ipo.subscription_retail:.1f}x subscribed",
                 "institutional_confidence": institutional_confidence
             },
-            "key_risks": [
-                f"Margin compression risk if raw material / operational input costs escalate.",
-                f"Sectoral competition and pricing pressure from established incumbents.",
-                f"Execution risk associated with aggressive capacity deployment plans."
-            ],
+            "key_risks": risks_list,
             "risk_level": risk_level,
             "market_sentiment_gmp": {
                 "sentiment_phase": "Risk-On institutional bidding environment",
