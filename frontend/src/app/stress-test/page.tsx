@@ -18,11 +18,11 @@ import {
 import { StockSelector } from "@/components/StockSelector";
 
 const HelpTooltip = ({ text }: { text: string }) => (
-  <span className="group relative inline-flex items-center ml-1 cursor-help">
+  <span className="group relative inline-flex items-center ml-1.5 cursor-help">
     <Info className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
-    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10 text-center">
+    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-52 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-20 text-center font-normal leading-tight">
       {text}
-      <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-800 block"></span>
+      <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900 block"></span>
     </span>
   </span>
 );
@@ -128,22 +128,24 @@ export default function StressTestPage() {
   };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <div className="mb-10 text-center max-w-3xl mx-auto">
-        <div className="inline-flex items-center justify-center p-3 bg-emerald-100 rounded-full mb-4">
-          <TrendingDown className="w-8 h-8 text-emerald-600" />
+    <div className="p-8 max-w-6xl mx-auto space-y-10">
+      {/* Header */}
+      <div className="text-center max-w-3xl mx-auto">
+        <div className="inline-flex items-center justify-center p-3 bg-emerald-100 rounded-full mb-3">
+          <TrendingDown className="w-7 h-7 text-emerald-600" />
         </div>
-        <h1 className="text-4xl font-extrabold text-gray-900 mb-4">Production Monte Carlo Stress Engine</h1>
-        <p className="text-lg text-gray-600">
-          Run institutional 10,000-path simulations using Sobol Quasi-Monte Carlo sampling, Merton Jump-Diffusion, and Regime-Switching HMM models.
+        <h1 className="text-3xl font-extrabold text-gray-900 mb-2">Portfolio Stress Engine</h1>
+        <p className="text-base text-gray-600">
+          Simulates 10,000 portfolio futures over 30 days to measure Value at Risk (VaR), Expected Shortfall, and crash drawdowns.
         </p>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden mb-12">
-        <div className="p-8 bg-gray-50/50 border-b border-gray-100 space-y-6">
+      {/* Main Parameters Box */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-6 bg-gray-50/60 border-b border-gray-200 space-y-6">
           
-          {/* Top Controls: Initial Capital, Model Engine & Sampler Selection */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+          {/* Simulation Controls Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
                 Investment Capital (₹)
@@ -168,6 +170,7 @@ export default function StressTestPage() {
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center">
                 <Cpu className="w-3.5 h-3.5 text-blue-500 mr-1" /> Stochastic Model
+                <HelpTooltip text="HMM detects Bull/Bear regimes. Merton captures price jumps. GBM assumes continuous returns." />
               </label>
               <select
                 value={modelType}
@@ -183,6 +186,7 @@ export default function StressTestPage() {
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center">
                 <Zap className="w-3.5 h-3.5 text-orange-500 mr-1" /> Sampler Engine
+                <HelpTooltip text="Sobol QMC ensures uniform random space coverage for faster numerical convergence." />
               </label>
               <select
                 value={samplerType}
@@ -196,83 +200,81 @@ export default function StressTestPage() {
             </div>
           </div>
 
-          <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-sm mr-3">1</span>
-            Portfolio Allocation & Stock Selection
+          <h2 className="text-xl font-bold text-gray-800 flex items-center">
+            <span className="flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-600 text-xs font-bold mr-2.5">1</span>
+            Stock Allocation & Weights
           </h2>
           
-          <div className="space-y-4 max-w-3xl">
+          <div className="space-y-3 max-w-3xl">
             {portfolio.map((item, i) => (
-              <div key={i} className="flex gap-4 items-center">
+              <div key={i} className="flex gap-3 items-center">
                 <div className="flex-1">
                   <StockSelector
                     value={item.ticker}
                     onChange={(sym, name) => handleTickerChange(i, sym, name)}
-                    placeholder="Search Stock Symbol or Company Name (e.g., RELIANCE)..."
-                    inputClassName="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                    placeholder="Search Stock Symbol or Name (e.g. RELIANCE)..."
+                    inputClassName="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                   />
                 </div>
-                <div className="w-48">
+                <div className="w-40">
                   <div className="relative">
                     <input
                       type="number"
                       value={item.weight}
                       onChange={(e) => handleWeightChange(i, e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition pr-8"
+                      className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none pr-8 text-sm font-semibold"
                     />
-                    <span className="absolute right-4 top-3.5 text-gray-400 font-medium">%</span>
+                    <span className="absolute right-3.5 top-2.5 text-gray-400 text-xs font-bold">%</span>
                   </div>
                 </div>
                 <button 
                   onClick={() => removeRow(i)} 
-                  className="p-3 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                  className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
                   title="Remove stock"
                 >
-                  <Trash2 className="w-5 h-5" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             ))}
             
             <button 
               onClick={addRow} 
-              className="py-3 px-4 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium flex items-center transition"
+              className="py-2 px-3 text-blue-600 hover:bg-blue-50 rounded-lg text-xs font-bold flex items-center transition"
             >
-              <Plus className="w-4 h-4 mr-1.5" /> Add another stock
+              <Plus className="w-4 h-4 mr-1" /> Add Stock
             </button>
           </div>
         </div>
 
-        <div className="p-8">
-          <div className="flex flex-col md:flex-row justify-between items-center max-w-3xl">
-            <div className="mb-4 md:mb-0">
-              <h2 className="text-xl font-bold text-gray-800 flex items-center mb-1">
-                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-sm mr-3">2</span>
-                Check your allocation
-              </h2>
-              <p className="text-gray-500 ml-11 text-sm">Total must equal 100%</p>
-            </div>
-            
-            <div className="flex items-center gap-6">
-              <div className="text-right">
-                <span className="block text-sm text-gray-500">Total Weight</span>
-                <span className={`text-2xl font-bold ${totalWeight === 100 ? 'text-green-500' : 'text-red-500'}`}>
-                  {totalWeight}%
-                </span>
-              </div>
-              
-              <button
-                onClick={runSimulation}
-                disabled={loading || totalWeight !== 100}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl flex items-center justify-center font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg shadow-blue-200"
-              >
-                {loading ? "Simulating 10,000 futures..." : "Run Stress Test"}
-              </button>
-            </div>
+        <div className="p-6 flex flex-col md:flex-row justify-between items-center max-w-3xl gap-4">
+          <div>
+            <h2 className="text-base font-bold text-gray-800 flex items-center mb-0.5">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 text-xs font-bold mr-2">2</span>
+              Allocation Check
+            </h2>
+            <p className="text-gray-500 ml-8 text-xs font-medium">Weights must total 100%</p>
           </div>
           
+          <div className="flex items-center gap-6">
+            <div className="text-right">
+              <span className="block text-xs text-gray-500 font-semibold">Total Weight</span>
+              <span className={`text-xl font-black ${totalWeight === 100 ? 'text-green-600' : 'text-red-500'}`}>
+                {totalWeight}%
+              </span>
+            </div>
+            
+            <button
+              onClick={runSimulation}
+              disabled={loading || totalWeight !== 100}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl flex items-center justify-center font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition shadow-md shadow-blue-200"
+            >
+              {loading ? "Running 10,000 Paths..." : "Run Stress Test"}
+            </button>
+          </div>
+
           {error && (
-            <div className="mt-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-start max-w-3xl">
-              <AlertCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-start text-xs max-w-3xl">
+              <AlertCircle className="w-4 h-4 mr-1.5 mt-0.5 flex-shrink-0" />
               {error}
             </div>
           )}
@@ -281,90 +283,90 @@ export default function StressTestPage() {
 
       {/* Results Section */}
       {data && (
-        <div id="results-section" className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <div id="results-section" className="space-y-8 animate-in fade-in duration-500">
           
-          {/* Executive Summary */}
-          <div className={`p-8 rounded-2xl border ${getRiskColor(data.risk_metrics.risk_color)}`}>
-            <div className="flex items-start gap-6">
-              <div className="bg-white p-4 rounded-full shadow-sm">
+          {/* Crisp Executive Risk Summary */}
+          <div className={`p-6 rounded-2xl border ${getRiskColor(data.risk_metrics.risk_color)}`}>
+            <div className="flex items-start gap-5">
+              <div className="bg-white p-3.5 rounded-full shadow-sm">
                 {getRiskIcon(data.risk_metrics.risk_label)}
               </div>
-              <div>
-                <div className="flex items-center gap-3 mb-2 flex-wrap">
-                  <h3 className="text-3xl font-bold">{data.risk_metrics.risk_label}</h3>
-                  <span className="text-xs font-black bg-white/80 border px-3 py-1 rounded-full uppercase tracking-wider">
-                    Model: {data.model_metadata?.model_used} | Sampler: {data.model_metadata?.sampler_used}
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2 flex-wrap justify-between">
+                  <h3 className="text-2xl font-black">{data.risk_metrics.risk_label}</h3>
+                  <span className="text-[11px] font-bold bg-white/90 border px-3 py-1 rounded-full uppercase tracking-wider text-gray-700">
+                    {data.model_metadata?.model_used} • {data.model_metadata?.sampler_used}
                   </span>
                 </div>
-                <p className="text-lg opacity-90 max-w-3xl">
-                  Based on current market conditions ({data.regime.name.toLowerCase()}), if you invested <strong>{formatCurrency(data.simulation.initial_value)}</strong> today for 30 days:
+
+                <p className="text-sm font-semibold opacity-90 mb-4">
+                  30-Day Risk Summary for <strong>{formatCurrency(data.simulation.initial_value)}</strong> Capital (Market State: <strong>{data.regime.name}</strong>):
                 </p>
-                
-                <ul className="mt-6 space-y-4">
-                  <li className="flex items-start">
-                    <span className="text-xl mr-3">📉</span>
-                    <div className="text-lg">
-                      <strong>In a bad month</strong>, you could realistically lose around <strong>{formatCurrency(data.risk_metrics.var_95_value)}</strong>.
-                      <HelpTooltip text="This is the Value at Risk (VaR). 95% of the time, your losses will be less than this." />
-                    </div>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-xl mr-3">🚨</span>
-                    <div className="text-lg">
-                      <strong>In an extreme crash</strong>, your average loss in the worst 5% of cases would be about <strong>{formatCurrency(data.risk_metrics.cvar_95_value)}</strong>.
-                      <HelpTooltip text="This is the Expected Shortfall (CVaR). It measures how bad things get when the VaR threshold is broken." />
-                    </div>
-                  </li>
-                </ul>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white/80 p-4 rounded-xl border border-black/5">
+                    <span className="text-xs text-gray-500 uppercase font-bold tracking-wider block mb-1">📉 Bad Month Loss (VaR 95%)</span>
+                    <span className="text-xl font-extrabold text-gray-900">{formatCurrency(data.risk_metrics.var_95_value)}</span>
+                    <p className="text-[11px] text-gray-600 mt-1 leading-tight">
+                      Maximum expected loss in 95% of normal trading conditions over 30 days.
+                    </p>
+                  </div>
+
+                  <div className="bg-white/80 p-4 rounded-xl border border-black/5">
+                    <span className="text-xs text-gray-500 uppercase font-bold tracking-wider block mb-1">🚨 Extreme Crash Loss (CVaR 95%)</span>
+                    <span className="text-xl font-extrabold text-red-700">{formatCurrency(data.risk_metrics.cvar_95_value)}</span>
+                    <p className="text-[11px] text-gray-600 mt-1 leading-tight">
+                      Average expected loss during the worst 5% tail-risk crash events.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Simple Visuals */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-              <div className="flex justify-between items-end mb-6">
+          {/* Outcomes Chart & Probability Indicators */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+              <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
                 <div>
-                  <h3 className="text-xl font-bold text-gray-800">Possible Future Outcomes</h3>
-                  <p className="text-gray-500 text-sm">Showing the range of possibilities over the next 30 days.</p>
+                  <h3 className="text-base font-bold text-gray-800">Projected 30-Day Outcomes</h3>
+                  <p className="text-xs text-gray-500">10,000 simulated path distribution trajectory</p>
                 </div>
-                <div className="flex items-center gap-4 text-sm">
-                  <span className="flex items-center"><span className="w-3 h-3 rounded-full bg-green-500 mr-2"></span> Expected</span>
-                  <span className="flex items-center"><span className="w-3 h-3 rounded-full bg-emerald-100 mr-2"></span> Likely Range</span>
+                <div className="flex items-center gap-4 text-xs font-semibold">
+                  <span className="flex items-center text-green-600"><span className="w-3 h-0.5 bg-green-500 inline-block mr-1.5"></span> Median Path</span>
+                  <span className="flex items-center text-emerald-700"><span className="w-3 h-3 bg-emerald-100 inline-block mr-1.5 rounded-sm"></span> Likely Range (10th-90th)</span>
                 </div>
               </div>
               
-              <div className="h-[400px]">
+              <div className="h-[380px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#9ca3af'}} dy={10} />
+                  <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
+                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} dy={10} />
                     <YAxis 
                       domain={['auto', 'auto']} 
                       axisLine={false} 
                       tickLine={false} 
-                      tick={{fill: '#9ca3af'}}
+                      tick={{fill: '#64748b', fontSize: 11}}
                       tickFormatter={(val) => `₹${(val/1000).toFixed(0)}k`} 
-                      dx={-10}
+                      dx={-5}
                     />
                     <Tooltip 
-                      contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px 16px' }}
+                      contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                       formatter={(value: any, name?: any) => {
                         const nameStr = String(name || '');
                         if (nameStr.startsWith('path_')) return [null, null];
-                        if (Array.isArray(value)) return [`₹${Math.round(value[0]).toLocaleString()} - ₹${Math.round(value[1]).toLocaleString()}`, "Likely Range (10th-90th Percentile)"];
-                        if (nameStr === 'p50') return [`₹${Math.round(value).toLocaleString()}`, "Expected Value (Median)"];
+                        if (Array.isArray(value)) return [`₹${Math.round(value[0]).toLocaleString()} - ₹${Math.round(value[1]).toLocaleString()}`, "10th - 90th Percentile"];
+                        if (nameStr === 'p50') return [`₹${Math.round(value).toLocaleString()}`, "Median Outcome"];
                         return [null, null];
                       }} 
                       labelFormatter={(label) => `Day ${label}`}
                     />
                     
-                    {/* Background Sample Paths */}
                     {data.simulation.sample_paths?.map((_: any, i: number) => (
-                      <Line key={`path_${i}`} type="monotone" dataKey={`path_${i}`} stroke="#9ca3af" strokeWidth={1} opacity={0.1} dot={false} isAnimationActive={false} tooltipType="none" />
+                      <Line key={`path_${i}`} type="monotone" dataKey={`path_${i}`} stroke="#9ca3af" strokeWidth={1} opacity={0.08} dot={false} isAnimationActive={false} tooltipType="none" />
                     ))}
 
-                    {/* Confidence Band (P10 to P90) */}
                     <Area 
                       type="monotone" 
                       dataKey="p10_p90" 
@@ -373,97 +375,95 @@ export default function StressTestPage() {
                       opacity={0.6}
                     />
                     
-                    {/* Median Line */}
-                    <Line type="monotone" dataKey="p50" stroke="#10b981" strokeWidth={4} dot={false} />
+                    <Line type="monotone" dataKey="p50" stroke="#10b981" strokeWidth={3} dot={false} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
             <div className="space-y-6">
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <h3 className="text-lg font-bold text-gray-800 mb-4">Chance of Making Money</h3>
-                <div className="h-12 w-full bg-red-100 rounded-xl overflow-hidden flex relative">
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 space-y-3">
+                <h3 className="text-base font-bold text-gray-800">Probability of Profit</h3>
+                <div className="h-10 w-full bg-red-100 rounded-xl overflow-hidden flex relative">
                   <div 
-                    className="h-full bg-green-500 transition-all duration-1000 ease-out flex items-center px-4" 
+                    className="h-full bg-green-500 transition-all duration-1000 flex items-center px-3" 
                     style={{ width: `${100 - data.risk_metrics.prob_loss_0}%` }}
                   >
-                    <span className="text-white font-bold">{Math.round(100 - data.risk_metrics.prob_loss_0)}% Profit</span>
+                    <span className="text-white text-xs font-extrabold">{Math.round(100 - data.risk_metrics.prob_loss_0)}% Profit</span>
                   </div>
-                  <div className="absolute right-4 top-0 bottom-0 flex items-center text-red-700 font-bold">
+                  <div className="absolute right-3 top-0 bottom-0 flex items-center text-red-700 text-xs font-extrabold">
                     {Math.round(data.risk_metrics.prob_loss_0)}% Loss
                   </div>
                 </div>
-                <p className="text-sm text-gray-500 mt-4 text-center">
-                  Based on 10,000 simulated futures, you have a <strong>{Math.round(100 - data.risk_metrics.prob_loss_0)}% chance</strong> of ending the 30 days with more than your initial {formatCurrency(data.simulation.initial_value)}.
+                <p className="text-xs text-gray-500 leading-normal">
+                  <strong>{Math.round(100 - data.risk_metrics.prob_loss_0)}%</strong> of 10,000 simulated futures finish above principal capital {formatCurrency(data.simulation.initial_value)}.
                 </p>
               </div>
               
-              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                <h3 className="text-lg font-bold text-gray-800 mb-2">Severe Loss Risk</h3>
-                <div className="flex items-end gap-2 mb-2">
-                  <span className="text-4xl font-extrabold text-red-500">{data.risk_metrics.prob_loss_20.toFixed(1)}%</span>
-                  <span className="text-gray-500 mb-1">chance</span>
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                <h3 className="text-base font-bold text-gray-800 mb-1">Severe Loss Probability (&gt;20%)</h3>
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-3xl font-black text-red-600">{data.risk_metrics.prob_loss_20.toFixed(1)}%</span>
+                  <span className="text-xs text-gray-500 font-semibold">chance</span>
                 </div>
-                <p className="text-sm text-gray-500">
-                  Probability of losing more than 20% of your portfolio value in the next 30 days.
+                <p className="text-xs text-gray-500">
+                  Likelihood of experiencing a drawdown greater than 20% over 30 days.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Institutional Technical Diagnostics Accordion */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          {/* Technical Diagnostics Accordion */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <button 
               onClick={() => setShowTechDetails(!showTechDetails)}
-              className="w-full px-6 py-4 flex items-center justify-between text-left focus:outline-none hover:bg-gray-50 transition"
+              className="w-full px-6 py-3.5 flex items-center justify-between text-left focus:outline-none hover:bg-gray-50 transition"
             >
-              <div className="flex items-center text-gray-800 font-bold">
-                <span className="mr-2">🔬</span> Institutional Numerical & Statistical Diagnostics
+              <div className="flex items-center text-gray-800 text-sm font-bold">
+                <span className="mr-2">🔬</span> Technical Numerical Diagnostics
               </div>
-              {showTechDetails ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+              {showTechDetails ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
             </button>
             
             {showTechDetails && (
-              <div className="px-6 pb-6 pt-2 border-t border-gray-100">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="px-6 pb-6 pt-3 border-t border-gray-100">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-xs">
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Stochastic Process</div>
-                    <div className="font-bold text-gray-900">{data.model_metadata?.model_used}</div>
+                    <span className="text-gray-500 uppercase font-semibold block mb-0.5">Stochastic Process</span>
+                    <span className="font-bold text-gray-900">{data.model_metadata?.model_used}</span>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Sampler Method</div>
-                    <div className="font-bold text-blue-600">{data.model_metadata?.sampler_used}</div>
+                    <span className="text-gray-500 uppercase font-semibold block mb-0.5">Sampler Method</span>
+                    <span className="font-bold text-blue-600">{data.model_metadata?.sampler_used}</span>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Standard Error (SE)</div>
-                    <div className="font-bold text-gray-900">₹{data.model_metadata?.standard_error?.toFixed(2)}</div>
+                    <span className="text-gray-500 uppercase font-semibold block mb-0.5">Standard Error (SE)</span>
+                    <span className="font-bold text-gray-900">₹{data.model_metadata?.standard_error?.toFixed(2)}</span>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">95% Mean Confidence Band</div>
-                    <div className="font-bold text-green-600">₹{Math.round(data.model_metadata?.ci_95_lower).toLocaleString()} – ₹{Math.round(data.model_metadata?.ci_95_upper).toLocaleString()}</div>
+                    <span className="text-gray-500 uppercase font-semibold block mb-0.5">95% Mean Band</span>
+                    <span className="font-bold text-green-600">₹{Math.round(data.model_metadata?.ci_95_lower).toLocaleString()} – ₹{Math.round(data.model_metadata?.ci_95_upper).toLocaleString()}</span>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Skewness</div>
-                    <div className="font-bold text-gray-900">{data.model_metadata?.skewness?.toFixed(3)}</div>
+                    <span className="text-gray-500 uppercase font-semibold block mb-0.5">Skewness</span>
+                    <span className="font-bold text-gray-900">{data.model_metadata?.skewness?.toFixed(3)}</span>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Excess Kurtosis</div>
-                    <div className="font-bold text-gray-900">{data.model_metadata?.kurtosis?.toFixed(3)}</div>
+                    <span className="text-gray-500 uppercase font-semibold block mb-0.5">Excess Kurtosis</span>
+                    <span className="font-bold text-gray-900">{data.model_metadata?.kurtosis?.toFixed(3)}</span>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Max Drawdown (95%)</div>
-                    <div className="font-bold text-red-600">-{data.risk_metrics.max_drawdown_percent_95.toFixed(2)}%</div>
+                    <span className="text-gray-500 uppercase font-semibold block mb-0.5">Max Drawdown (95%)</span>
+                    <span className="font-bold text-red-600">-{data.risk_metrics.max_drawdown_percent_95.toFixed(2)}%</span>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">VaR 99% (Extreme)</div>
-                    <div className="font-bold text-red-600">-{formatCurrency(data.risk_metrics.var_99_value)}</div>
+                    <span className="text-gray-500 uppercase font-semibold block mb-0.5">VaR 99% (Extreme)</span>
+                    <span className="font-bold text-red-600">-{formatCurrency(data.risk_metrics.var_99_value)}</span>
                   </div>
                 </div>
               </div>
             )}
           </div>
-          
         </div>
       )}
     </div>
