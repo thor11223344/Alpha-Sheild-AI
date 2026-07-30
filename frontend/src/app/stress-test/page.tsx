@@ -448,35 +448,66 @@ export default function StressTestPage() {
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-xs">
               <div>
-                <span className="text-gray-500 uppercase font-semibold block mb-0.5">Stochastic Process</span>
+                <span className="text-gray-500 uppercase font-semibold flex items-center mb-0.5">
+                  Stochastic Process
+                  <HelpTooltip text="The mathematical model simulating how stock prices move over time." />
+                </span>
                 <span className="font-bold text-gray-900">{data.model_metadata?.model_used}</span>
               </div>
+
               <div>
-                <span className="text-gray-500 uppercase font-semibold block mb-0.5">Sampler Method</span>
+                <span className="text-gray-500 uppercase font-semibold flex items-center mb-0.5">
+                  Sampler Method
+                  <HelpTooltip text="The sampling technique used for path shocks (e.g. Sobol QMC)." />
+                </span>
                 <span className="font-bold text-blue-600">{data.model_metadata?.sampler_used}</span>
               </div>
+
               <div>
-                <span className="text-gray-500 uppercase font-semibold block mb-0.5">Standard Error (SE)</span>
+                <span className="text-gray-500 uppercase font-semibold flex items-center mb-0.5">
+                  Standard Error (SE)
+                  <HelpTooltip text="Measures simulation accuracy. A smaller SE means the estimated mean is more precise." />
+                </span>
                 <span className="font-bold text-gray-900">₹{data.model_metadata?.standard_error?.toFixed(2)}</span>
               </div>
+
               <div>
-                <span className="text-gray-500 uppercase font-semibold block mb-0.5">95% Mean Band</span>
+                <span className="text-gray-500 uppercase font-semibold flex items-center mb-0.5">
+                  95% Mean Band
+                  <HelpTooltip text="The range where the true portfolio average value is 95% guaranteed to fall." />
+                </span>
                 <span className="font-bold text-green-600">₹{Math.round(data.model_metadata?.ci_95_lower).toLocaleString()} – ₹{Math.round(data.model_metadata?.ci_95_upper).toLocaleString()}</span>
               </div>
+
               <div>
-                <span className="text-gray-500 uppercase font-semibold block mb-0.5">Skewness</span>
+                <span className="text-gray-500 uppercase font-semibold flex items-center mb-0.5">
+                  Skewness
+                  <HelpTooltip text="Measures return asymmetry. Negative values mean higher risk of large unexpected drops." />
+                </span>
                 <span className="font-bold text-gray-900">{data.model_metadata?.skewness?.toFixed(3)}</span>
               </div>
+
               <div>
-                <span className="text-gray-500 uppercase font-semibold block mb-0.5">Excess Kurtosis</span>
+                <span className="text-gray-500 uppercase font-semibold flex items-center mb-0.5">
+                  Excess Kurtosis
+                  <HelpTooltip text="Measures tail-risk. Higher values mean market crashes happen more frequently than normal." />
+                </span>
                 <span className="font-bold text-gray-900">{data.model_metadata?.kurtosis?.toFixed(3)}</span>
               </div>
+
               <div>
-                <span className="text-gray-500 uppercase font-semibold block mb-0.5">Max Drawdown (95%)</span>
+                <span className="text-gray-500 uppercase font-semibold flex items-center mb-0.5">
+                  Max Drawdown (95%)
+                  <HelpTooltip text="The peak-to-trough loss experienced by 95% of simulated portfolio paths." />
+                </span>
                 <span className="font-bold text-red-600">-{data.risk_metrics.max_drawdown_percent_95.toFixed(2)}%</span>
               </div>
+
               <div>
-                <span className="text-gray-500 uppercase font-semibold block mb-0.5">VaR 99% (Extreme)</span>
+                <span className="text-gray-500 uppercase font-semibold flex items-center mb-0.5">
+                  VaR 99% (Extreme)
+                  <HelpTooltip text="Extreme Value at Risk. 99% of the time, 30-day losses will be less than this." />
+                </span>
                 <span className="font-bold text-red-600">-{formatCurrency(data.risk_metrics.var_99_value)}</span>
               </div>
             </div>
