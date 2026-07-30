@@ -393,39 +393,58 @@ export default function IPOPage() {
             <>
               {/* Top Scorecard & Recommendation */}
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex flex-col items-center md:items-start text-center md:text-left">
-                  <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">Institutional Rating</span>
-                  <h2 className="text-2xl font-black text-gray-900 mb-2">{data.name}</h2>
+                <div className="flex flex-col items-center md:items-start text-center md:text-left space-y-3">
+                  <div>
+                    <span className="text-xs text-gray-400 uppercase tracking-wider font-bold block mb-1">Institutional Rating Engine</span>
+                    <h2 className="text-2xl font-black text-gray-900">{data.name}</h2>
+                  </div>
                   
-                  <div className={`px-4 py-1.5 rounded-xl text-sm font-black border uppercase tracking-wider ${data.memo.recommendation_guidance.badge_style}`}>
+                  <div className={`px-4 py-2 rounded-xl text-sm font-black border uppercase tracking-wider ${data.memo.recommendation_guidance.badge_style}`}>
                     {data.recommendation}
                   </div>
-                </div>
 
-                <div className="flex items-center gap-6">
                   {(() => {
                     const scoreVal = data.score_100 || data.total_score || 0;
                     const colorObj = getScoreColor(scoreVal);
                     return (
-                      <>
-                        <div className="text-center">
-                          <span className="block text-xs text-gray-400 font-semibold uppercase">Overall Score</span>
-                          <span className={`text-4xl font-black ${colorObj.text}`}>
-                            {scoreVal}
-                            <span className="text-base text-gray-400 font-normal">/100</span>
-                          </span>
-                        </div>
+                      <div className="pt-2">
+                        <span className="block text-xs text-gray-400 font-semibold uppercase">Overall Score</span>
+                        <span className={`text-4xl font-black ${colorObj.text}`}>
+                          {scoreVal}
+                          <span className="text-base text-gray-400 font-normal">/100</span>
+                        </span>
+                      </div>
+                    );
+                  })()}
+                </div>
 
-                        <div className="w-32 h-32">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <RadarChart data={data.spider_chart_data || data.chartData || []}>
-                              <PolarGrid stroke="#e5e7eb" />
-                              <PolarAngleAxis dataKey={data.spider_chart_data ? "factor" : "subject"} tick={{ fill: '#9ca3af', fontSize: 9 }} />
-                              <Radar dataKey={data.spider_chart_data ? "score" : "A"} stroke={colorObj.stroke} fill={colorObj.stroke} fillOpacity={0.4} />
-                            </RadarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </>
+                <div className="w-full md:w-80 h-72 flex items-center justify-center bg-gray-50/50 rounded-2xl p-2 border border-gray-100">
+                  {(() => {
+                    const scoreVal = data.score_100 || data.total_score || 0;
+                    const colorObj = getScoreColor(scoreVal);
+                    return (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RadarChart data={data.spider_chart_data || data.chartData || []} outerRadius="75%">
+                          <PolarGrid stroke="#cbd5e1" strokeDasharray="3 3" />
+                          <PolarAngleAxis 
+                            dataKey={data.spider_chart_data ? "factor" : "subject"} 
+                            tick={{ fill: '#374151', fontSize: 11, fontWeight: 700 }} 
+                          />
+                          <PolarRadiusAxis angle={30} domain={[0, 5]} tick={{ fontSize: 9, fill: '#9ca3af' }} />
+                          <Radar 
+                            name="Factor Score" 
+                            dataKey={data.spider_chart_data ? "score" : "A"} 
+                            stroke={colorObj.stroke} 
+                            fill={colorObj.stroke} 
+                            fillOpacity={0.45} 
+                            strokeWidth={2.5}
+                          />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: '#1e293b', borderRadius: '12px', border: 'none', color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
+                            itemStyle={{ color: '#38bdf8' }}
+                          />
+                        </RadarChart>
+                      </ResponsiveContainer>
                     );
                   })()}
                 </div>
