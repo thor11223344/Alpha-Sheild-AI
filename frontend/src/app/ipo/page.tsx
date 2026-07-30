@@ -53,6 +53,20 @@ export default function IPOPage() {
   const [activeTab, setActiveTab] = useState<string>("memo");
   const [showAdvancedDRHP, setShowAdvancedDRHP] = useState<boolean>(true);
 
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return { text: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200", stroke: "#10b981", badge: "bg-emerald-100 text-emerald-800 border-emerald-300" };
+    if (score >= 65) return { text: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200", stroke: "#3b82f6", badge: "bg-blue-100 text-blue-800 border-blue-300" };
+    if (score >= 50) return { text: "text-amber-600", bg: "bg-amber-50", border: "border-amber-200", stroke: "#f59e0b", badge: "bg-amber-100 text-amber-800 border-amber-300" };
+    return { text: "text-red-600", bg: "bg-red-50", border: "border-red-200", stroke: "#ef4444", badge: "bg-red-100 text-red-800 border-red-300" };
+  };
+
+  const getFactorColor = (score: number) => {
+    if (score >= 4.2) return { bar: "bg-emerald-500", text: "text-emerald-700", bg: "bg-emerald-50/70", border: "border-emerald-200" };
+    if (score >= 3.2) return { bar: "bg-blue-500", text: "text-blue-700", bg: "bg-blue-50/70", border: "border-blue-200" };
+    if (score >= 2.5) return { bar: "bg-amber-500", text: "text-amber-700", bg: "bg-amber-50/70", border: "border-amber-200" };
+    return { bar: "bg-red-500", text: "text-red-700", bg: "bg-red-50/70", border: "border-red-200" };
+  };
+
   const [form, setForm] = useState({
     name: "NTPC Green Energy Ltd.",
     issue_price: 108,
@@ -389,20 +403,31 @@ export default function IPOPage() {
                 </div>
 
                 <div className="flex items-center gap-6">
-                  <div className="text-center">
-                    <span className="block text-xs text-gray-400 font-semibold uppercase">Overall Score</span>
-                    <span className="text-4xl font-extrabold text-orange-500">{data.score_100 || data.total_score}<span className="text-base text-gray-400 font-normal">/100</span></span>
-                  </div>
+                  {(() => {
+                    const scoreVal = data.score_100 || data.total_score || 0;
+                    const colorObj = getScoreColor(scoreVal);
+                    return (
+                      <>
+                        <div className="text-center">
+                          <span className="block text-xs text-gray-400 font-semibold uppercase">Overall Score</span>
+                          <span className={`text-4xl font-black ${colorObj.text}`}>
+                            {scoreVal}
+                            <span className="text-base text-gray-400 font-normal">/100</span>
+                          </span>
+                        </div>
 
-                  <div className="w-32 h-32">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart data={data.spider_chart_data || data.chartData || []}>
-                        <PolarGrid stroke="#e5e7eb" />
-                        <PolarAngleAxis dataKey={data.spider_chart_data ? "factor" : "subject"} tick={{ fill: '#9ca3af', fontSize: 9 }} />
-                        <Radar dataKey={data.spider_chart_data ? "score" : "A"} stroke="#f97316" fill="#f97316" fillOpacity={0.5} />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </div>
+                        <div className="w-32 h-32">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <RadarChart data={data.spider_chart_data || data.chartData || []}>
+                              <PolarGrid stroke="#e5e7eb" />
+                              <PolarAngleAxis dataKey={data.spider_chart_data ? "factor" : "subject"} tick={{ fill: '#9ca3af', fontSize: 9 }} />
+                              <Radar dataKey={data.spider_chart_data ? "score" : "A"} stroke={colorObj.stroke} fill={colorObj.stroke} fillOpacity={0.4} />
+                            </RadarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -566,21 +591,24 @@ export default function IPOPage() {
                   {activeTab === "scorecard" && (
                     <div className="space-y-3">
                       <h4 className="font-bold text-gray-900 text-sm mb-3">9-Factor Weighted Scorecard Matrix</h4>
-                      {(data?.scorecard || []).map((item: any, i: number) => (
-                        <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 text-xs">
-                          <div className="flex-1">
-                            <span className="font-bold text-gray-800 block">{item.factor}</span>
-                            <span className="text-[10px] text-gray-400">Weight: {(item.weight * 100).toFixed(0)}%</span>
-                          </div>
-                          
-                          <div className="flex items-center gap-3">
-                            <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                              <div className="h-full bg-orange-500" style={{ width: `${(item.score / 5) * 100}%` }} />
+                      {(data?.scorecard || []).map((item: any, i: number) => {
+                        const fc = getFactorColor(item.score);
+                        return (
+                          <div key={i} className={`flex items-center justify-between p-3 rounded-xl border text-xs ${fc.bg} ${fc.border}`}>
+                            <div className="flex-1">
+                              <span className="font-bold text-gray-900 block">{item.factor}</span>
+                              <span className="text-[10px] text-gray-500 font-medium">Weight: {(item.weight * 100).toFixed(0)}%</span>
                             </div>
-                            <span className="font-bold text-gray-900 w-8 text-right">{item.score}/5</span>
+                            
+                            <div className="flex items-center gap-3">
+                              <div className="w-28 h-2 bg-gray-200/80 rounded-full overflow-hidden">
+                                <div className={`h-full ${fc.bar}`} style={{ width: `${(item.score / 5) * 100}%` }} />
+                              </div>
+                              <span className={`font-black w-10 text-right ${fc.text}`}>{item.score}/5</span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
