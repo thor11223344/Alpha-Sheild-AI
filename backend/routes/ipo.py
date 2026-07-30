@@ -493,13 +493,39 @@ def evaluate_ipo(ipo: IPOInput):
             {"subject": "Low Risk", "A": round(risk_score, 1), "fullMark": 5},
         ]
 
+        spider_chart_data = [
+            {"factor": "Moat & Biz", "score": round(moat_score, 1), "fullMark": 5},
+            {"factor": "Industry", "score": round(industry_score, 1), "fullMark": 5},
+            {"factor": "Financials", "score": round(financial_score, 1), "fullMark": 5},
+            {"factor": "Valuation", "score": round(valuation_score, 1), "fullMark": 5},
+            {"factor": "Capital Use", "score": round(objects_score, 1), "fullMark": 5},
+            {"factor": "Governance", "score": round(governance_score, 1), "fullMark": 5},
+            {"factor": "Inst. Demand", "score": round(institutional_score, 1), "fullMark": 5},
+            {"factor": "Low Risk", "score": round(risk_score, 1), "fullMark": 5},
+        ]
+
+        scorecard = [
+            {"factor": "Business Model & Moat", "score": round(moat_score, 1), "weight": 0.15},
+            {"factor": "Industry & Macro Tailwinds", "score": round(industry_score, 1), "weight": 0.10},
+            {"factor": "Financial Health & Earnings Quality", "score": round(financial_score, 1), "weight": 0.20},
+            {"factor": "Valuation vs Listed Peers", "score": round(valuation_score, 1), "weight": 0.15},
+            {"factor": "Objects of Issue (Proceeds Use)", "score": round(objects_score, 1), "weight": 0.10},
+            {"factor": "Promoter Quality & Governance", "score": round(governance_score, 1), "weight": 0.15},
+            {"factor": "Capital Structure & Dilution", "score": round(dilution_score, 1), "weight": 0.05},
+            {"factor": "Anchor & Institutional Demand", "score": round(institutional_score, 1), "weight": 0.05},
+            {"factor": "Key Risks & Red Flags", "score": round(risk_score, 1), "weight": 0.05},
+        ]
+
         return {
             "name": ipo.name,
             "total_score": total_score_100,
+            "score_100": total_score_100,
             "weighted_score_5": round(weighted_score_5, 2),
             "recommendation": recommendation,
             "category": category,
             "chartData": chart_data,
+            "spider_chart_data": spider_chart_data,
+            "scorecard": scorecard,
             "memo": memo
         }
 

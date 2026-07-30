@@ -391,15 +391,15 @@ export default function IPOPage() {
                 <div className="flex items-center gap-6">
                   <div className="text-center">
                     <span className="block text-xs text-gray-400 font-semibold uppercase">Overall Score</span>
-                    <span className="text-4xl font-extrabold text-orange-500">{data.score_100}<span className="text-base text-gray-400 font-normal">/100</span></span>
+                    <span className="text-4xl font-extrabold text-orange-500">{data.score_100 || data.total_score}<span className="text-base text-gray-400 font-normal">/100</span></span>
                   </div>
 
                   <div className="w-32 h-32">
                     <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart data={data.spider_chart_data}>
+                      <RadarChart data={data.spider_chart_data || data.chartData || []}>
                         <PolarGrid stroke="#e5e7eb" />
-                        <PolarAngleAxis dataKey="factor" tick={{ fill: '#9ca3af', fontSize: 9 }} />
-                        <Radar dataKey="score" stroke="#f97316" fill="#f97316" fillOpacity={0.5} />
+                        <PolarAngleAxis dataKey={data.spider_chart_data ? "factor" : "subject"} tick={{ fill: '#9ca3af', fontSize: 9 }} />
+                        <Radar dataKey={data.spider_chart_data ? "score" : "A"} stroke="#f97316" fill="#f97316" fillOpacity={0.5} />
                       </RadarChart>
                     </ResponsiveContainer>
                   </div>
@@ -520,7 +520,7 @@ export default function IPOPage() {
                   {activeTab === "scorecard" && (
                     <div className="space-y-3">
                       <h4 className="font-bold text-gray-900 text-sm mb-3">9-Factor Weighted Scorecard Matrix</h4>
-                      {data.scorecard.map((item: any, i: number) => (
+                      {(data?.scorecard || []).map((item: any, i: number) => (
                         <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 text-xs">
                           <div className="flex-1">
                             <span className="font-bold text-gray-800 block">{item.factor}</span>
