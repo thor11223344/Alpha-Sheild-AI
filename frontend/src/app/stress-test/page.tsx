@@ -401,14 +401,26 @@ export default function StressTestPage() {
               </div>
               
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-                <h3 className="text-base font-bold text-gray-800 mb-1">Severe Loss Probability (&gt;20%)</h3>
-                <div className="flex items-baseline gap-2 mb-1">
+                <h3 className="text-base font-bold text-gray-800 mb-1">Severe Loss Probability (20%+ Capital Loss)</h3>
+                <div className="flex items-baseline gap-2 mb-2">
                   <span className="text-3xl font-black text-red-600">{data.risk_metrics.prob_loss_20.toFixed(1)}%</span>
-                  <span className="text-xs text-gray-500 font-semibold">chance</span>
+                  <span className="text-xs text-gray-500 font-semibold">exact probability</span>
                 </div>
-                <p className="text-xs text-gray-500">
-                  Likelihood of experiencing a drawdown greater than 20% over 30 days.
-                </p>
+                
+                <div className="space-y-1.5 pt-2 border-t border-gray-100 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Any Capital Loss:</span>
+                    <span className="font-bold text-gray-800">{data.risk_metrics.prob_loss_0.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">10%+ Moderate Loss:</span>
+                    <span className="font-bold text-orange-600">{data.risk_metrics.prob_loss_10.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">20%+ Severe Crash Loss:</span>
+                    <span className="font-bold text-red-600">{data.risk_metrics.prob_loss_20.toFixed(1)}%</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
