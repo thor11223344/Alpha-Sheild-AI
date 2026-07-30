@@ -101,45 +101,43 @@ export default function AnomalyPage() {
     setManualPrice("");
   };
 
-  // Universal Click Handler for Horizontal & Freestyle drawing (Data points + Blank whitespace)
+  // Universal Click Handler for Horizontal & Freestyle drawing
   const handleChartClick = (chartState: any, mouseEvent?: React.MouseEvent<HTMLDivElement>) => {
     if (drawMode === "pointer" || !data?.data?.length) return;
 
-    // 1. Try active payload (Exact Candle Snap)
     const activeItem = chartState?.activePayload?.[0]?.payload;
+    const rect = chartContainerRef.current?.getBoundingClientRect();
 
     let targetPrice: number;
     let targetDate: string;
 
-    if (activeItem) {
-      targetPrice = roundToTwo(activeItem.close);
-      targetDate = activeItem.date;
-    } else if (mouseEvent && chartContainerRef.current) {
-      // 2. Fallback to pixel coordinate conversion if clicked in empty whitespace
-      const rect = chartContainerRef.current.getBoundingClientRect();
-      const clickY = mouseEvent.clientY - rect.top;
-      const clickX = mouseEvent.clientX - rect.left;
+    const prices = data.data.map((d: any) => d.close);
+    const minP = Math.min(...prices);
+    const maxP = Math.max(...prices);
+    const range = maxP - minP || 1;
 
-      const prices = data.data.map((d: any) => d.close);
-      const minP = Math.min(...prices);
-      const maxP = Math.max(...prices);
-      const range = maxP - minP || 1;
-
-      // Adjust for chart container margins (top: 15px, bottom: 25px)
-      const plotH = rect.height - 40;
-      const relY = Math.max(0, Math.min(1, (clickY - 15) / plotH));
-      targetPrice = roundToTwo(maxP - relY * range);
-
-      // Map X to nearest date
-      const plotW = rect.width - 50;
-      const relX = Math.max(0, Math.min(1, (clickX - 25) / plotW));
-      const idx = Math.floor(relX * (data.data.length - 1));
-      targetDate = data.data[Math.max(0, Math.min(data.data.length - 1, idx))]?.date || data.data[0].date;
-    } else {
-      return;
+    // Calculate exact click Y relative to container
+    let clickY: number | null = null;
+    if (mouseEvent && rect) {
+      clickY = mouseEvent.clientY - rect.top;
+    } else if (chartState?.chartY != null) {
+      clickY = chartState.chartY + 15; // 15px top margin
     }
 
     if (drawMode === "horizontal") {
+      if (clickY != null && rect) {
+        // Inner chart plotting bounds: top=15px, bottom=55px (margin 25px + XAxis 30px)
+        const topPadding = 15;
+        const bottomPadding = 55;
+        const plotH = Math.max(1, rect.height - topPadding - bottomPadding);
+        const relativeY = Math.max(0, Math.min(1, (clickY - topPadding) / plotH));
+        targetPrice = roundToTwo(maxP - relativeY * range);
+      } else if (activeItem) {
+        targetPrice = roundToTwo(activeItem.close);
+      } else {
+        return;
+      }
+
       setHorizontalLines((prev) => [
         ...prev,
         {
@@ -150,6 +148,25 @@ export default function AnomalyPage() {
         }
       ]);
     } else if (drawMode === "freestyle") {
+      if (activeItem) {
+        targetPrice = roundToTwo(activeItem.close);
+        targetDate = activeItem.date;
+      } else if (clickY != null && rect && mouseEvent) {
+        const clickX = mouseEvent.clientX - rect.left;
+        const topPadding = 15;
+        const bottomPadding = 55;
+        const plotH = Math.max(1, rect.height - topPadding - bottomPadding);
+        const relativeY = Math.max(0, Math.min(1, (clickY - topPadding) / plotH));
+        targetPrice = roundToTwo(maxP - relativeY * range);
+
+        const plotW = Math.max(1, rect.width - 50);
+        const relativeX = Math.max(0, Math.min(1, (clickX - 25) / plotW));
+        const idx = Math.floor(relativeX * (data.data.length - 1));
+        targetDate = data.data[Math.max(0, Math.min(data.data.length - 1, idx))]?.date || data.data[0].date;
+      } else {
+        return;
+      }
+
       if (!freestyleStart) {
         setFreestyleStart({ date: targetDate, price: targetPrice });
       } else {
