@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import anomaly, manipulation, portfolio, ipo
+from routes import anomaly, manipulation, portfolio, ipo, stocks
 
 app = FastAPI(
     title="MarketGuard AI API",
@@ -21,6 +21,7 @@ app.include_router(anomaly.router, prefix="/api/anomaly", tags=["Anomaly Screene
 app.include_router(manipulation.router, prefix="/api/manipulation", tags=["Manipulation Detector"])
 app.include_router(portfolio.router, prefix="/api/portfolio-stress", tags=["Portfolio Stress Tester"])
 app.include_router(ipo.router, prefix="/api/ipo-evaluate", tags=["AI IPO Evaluator"])
+app.include_router(stocks.router, prefix="/api/stocks", tags=["Stocks"])
 
 @app.get("/")
 def read_root():
