@@ -435,18 +435,22 @@ export default function IPOPage() {
                 <div className="p-6">
                   {activeTab === "memo" && (
                     <div className="space-y-6 text-sm text-gray-700 leading-relaxed">
-                      {/* Section 1: Executive Summary */}
+                      {/* Section 1: Executive Summary & Recommendation */}
                       <div className="p-5 bg-gray-50 rounded-xl border border-gray-200">
                         <h4 className="font-bold text-gray-900 text-base mb-2 flex items-center">
                           <Award className="w-4 h-4 text-orange-500 mr-2" /> Executive Summary & Strategy
                         </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
                           <div>
-                            <span className="text-gray-400 font-semibold block">Target Position Size</span>
+                            <span className="text-gray-400 font-semibold block uppercase">Recommendation</span>
+                            <span className="font-black text-gray-900">{data.recommendation}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400 font-semibold block uppercase">Target Position Size</span>
                             <span className="font-bold text-gray-900">{data.memo.recommendation_guidance.position_size}</span>
                           </div>
                           <div>
-                            <span className="text-gray-400 font-semibold block">Entry & Bidding Strategy</span>
+                            <span className="text-gray-400 font-semibold block uppercase">Entry & Bidding Strategy</span>
                             <span className="font-bold text-gray-900">{data.memo.recommendation_guidance.entry_strategy}</span>
                           </div>
                         </div>
@@ -457,62 +461,128 @@ export default function IPOPage() {
                         <h4 className="font-bold text-gray-900 mb-1 flex items-center text-base">
                           <Building className="w-4 h-4 text-blue-500 mr-2" /> 1. Business Model & Moat
                         </h4>
-                        <p className="text-gray-600">{data.memo.business_overview_moat.one_liner}</p>
-                        <div className="mt-2 text-xs grid grid-cols-2 gap-2 bg-blue-50/50 p-3 rounded-lg border border-blue-100">
-                          <div><span className="text-gray-500">Positioning:</span> <strong className="text-gray-800">{data.memo.business_overview_moat.industry_positioning}</strong></div>
-                          <div><span className="text-gray-500">Moat Rating:</span> <strong className="text-blue-700">{data.memo.business_overview_moat.moat_strength}</strong></div>
+                        <p className="text-gray-600 mb-2">{data.memo.business_overview_moat.one_liner}</p>
+                        <div className="text-xs grid grid-cols-3 gap-2 bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+                          <div><span className="text-gray-500 block">Positioning:</span> <strong className="text-gray-800">{data.memo.business_overview_moat.industry_positioning}</strong></div>
+                          <div><span className="text-gray-500 block">Moat Sources:</span> <strong className="text-gray-800">{data.memo.business_overview_moat.moat_sources}</strong></div>
+                          <div><span className="text-gray-500 block">Moat Rating:</span> <strong className="text-blue-700">{data.memo.business_overview_moat.moat_strength}</strong></div>
                         </div>
                       </div>
 
-                      {/* Section 3: Financial Performance */}
+                      {/* Section 3: Industry Structure & Tailwinds */}
                       <div>
                         <h4 className="font-bold text-gray-900 mb-1 flex items-center text-base">
-                          <TrendingUp className="w-4 h-4 text-green-500 mr-2" /> 2. Financial Performance & Quality
+                          <TrendingUp className="w-4 h-4 text-emerald-500 mr-2" /> 2. Industry Structure & Growth Tailwinds
                         </h4>
-                        <div className="grid grid-cols-3 gap-3 text-xs p-3 bg-green-50/50 rounded-lg border border-green-100">
+                        <p className="text-gray-600 mb-2">{data.memo.industry_growth_tailwinds.industry_trend}</p>
+                        <div className="text-xs grid grid-cols-2 gap-2 bg-emerald-50/50 p-3 rounded-lg border border-emerald-100">
+                          <div><span className="text-gray-500">Competitive Intensity:</span> <strong className="text-gray-800">{data.memo.industry_growth_tailwinds.competitive_intensity}</strong></div>
+                          <div><span className="text-gray-500">Sector Tailwinds:</span> <strong className="text-emerald-700">{data.memo.industry_growth_tailwinds.sector_tailwind}</strong></div>
+                        </div>
+                      </div>
+
+                      {/* Section 4: Financial Health & Quality of Growth */}
+                      <div>
+                        <h4 className="font-bold text-gray-900 mb-1 flex items-center text-base">
+                          <DollarSign className="w-4 h-4 text-green-600 mr-2" /> 3. Financial Health & Earnings Quality
+                        </h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs p-3 bg-green-50/50 rounded-lg border border-green-100">
                           <div><span className="text-gray-500 block">3-Yr Revenue CAGR</span><strong className="text-gray-900">{data.memo.financial_health_quality.revenue_cagr}</strong></div>
                           <div><span className="text-gray-500 block">Profitability</span><strong className="text-green-700">{data.memo.financial_health_quality.profitability_trend}</strong></div>
+                          <div><span className="text-gray-500 block">Cash Flow Quality</span><strong className="text-gray-900">{data.memo.financial_health_quality.cash_flow_quality}</strong></div>
                           <div><span className="text-gray-500 block">Balance Sheet</span><strong className="text-gray-900">{data.memo.financial_health_quality.balance_sheet}</strong></div>
                         </div>
                       </div>
 
-                      {/* Section 4: Valuation & Peers */}
+                      {/* Section 5: Valuation Analysis */}
                       <div>
                         <h4 className="font-bold text-gray-900 mb-1 flex items-center text-base">
-                          <DollarSign className="w-4 h-4 text-emerald-600 mr-2" /> 3. Valuation & Peer Benchmarking
+                          <PieChart className="w-4 h-4 text-indigo-500 mr-2" /> 4. Valuation Analysis & Peer Comparison
                         </h4>
                         <p className="text-xs text-gray-600 mb-2">{data.memo.valuation_analysis.peer_comparison}</p>
-                        <div className="text-xs p-3 bg-emerald-50/50 rounded-lg border border-emerald-100 flex justify-between items-center">
+                        <div className="text-xs p-3 bg-indigo-50/50 rounded-lg border border-indigo-100 flex justify-between items-center">
                           <span>Issue Price: <strong>{data.memo.valuation_analysis.issue_price}</strong></span>
-                          <span className="font-bold text-emerald-800 uppercase">Verdict: {data.memo.valuation_analysis.valuation_verdict}</span>
+                          <span className="font-bold text-indigo-800 uppercase">Valuation Verdict: {data.memo.valuation_analysis.valuation_verdict}</span>
                         </div>
                       </div>
 
-                      {/* Section 5: Objects of Proceeds */}
+                      {/* Section 6: Objects of the Issue */}
                       <div>
                         <h4 className="font-bold text-gray-900 mb-1 flex items-center text-base">
-                          <PieChart className="w-4 h-4 text-purple-500 mr-2" /> 4. Objects of the Issue (Proceeds Use)
+                          <FileText className="w-4 h-4 text-purple-500 mr-2" /> 5. Objects of the Issue (Proceeds Breakdown)
                         </h4>
-                        <p className="text-xs text-gray-600">{data.memo.objects_of_issue.capital_use_purpose}</p>
-                        <div className="mt-2 text-xs p-3 bg-purple-50/50 rounded-lg border border-purple-100 flex justify-between items-center">
-                          <span>Structure: <strong>{data.memo.objects_of_issue.fresh_issue_share}</strong></span>
+                        <p className="text-xs text-gray-600 mb-2">{data.memo.objects_of_issue.capital_use_purpose}</p>
+                        <div className="text-xs p-3 bg-purple-50/50 rounded-lg border border-purple-100 flex justify-between items-center">
+                          <span>Fresh Issue vs OFS: <strong>{data.memo.objects_of_issue.fresh_issue_share}</strong></span>
                           <span className="font-bold text-purple-800">{data.memo.objects_of_issue.capital_use_rating}</span>
                         </div>
                       </div>
 
-                      {/* Section 6: Key Risks */}
+                      {/* Section 7: Promoter Quality & Governance */}
+                      <div>
+                        <h4 className="font-bold text-gray-900 mb-1 flex items-center text-base">
+                          <ShieldCheck className="w-4 h-4 text-blue-600 mr-2" /> 6. Promoter Quality & Governance
+                        </h4>
+                        <p className="text-xs text-gray-600 mb-2">{data.memo.promoter_governance.governance_signals}</p>
+                        <div className="text-xs p-3 bg-blue-50/50 rounded-lg border border-blue-100 flex justify-between items-center">
+                          <span>Post-IPO Promoter Shareholding: <strong>{data.memo.promoter_governance.promoter_holding}</strong></span>
+                          <span className="font-bold text-blue-800 uppercase">Governance Rating: {data.memo.promoter_governance.governance_quality}</span>
+                        </div>
+                      </div>
+
+                      {/* Section 8: Capital Structure & Dilution */}
+                      <div>
+                        <h4 className="font-bold text-gray-900 mb-1 flex items-center text-base">
+                          <FileCheck className="w-4 h-4 text-teal-600 mr-2" /> 7. Capital Structure, Dilution & Lock-ups
+                        </h4>
+                        <div className="text-xs p-3 bg-teal-50/50 rounded-lg border border-teal-100 flex justify-between items-center">
+                          <span>Lock-up Commentary: <strong>{data.memo.capital_structure_dilution.lockup_commentary}</strong></span>
+                          <span className="font-bold text-teal-800">Dilution Risk: {data.memo.capital_structure_dilution.dilution_risk}</span>
+                        </div>
+                      </div>
+
+                      {/* Section 9: Institutional Demand */}
+                      <div>
+                        <h4 className="font-bold text-gray-900 mb-1 flex items-center text-base">
+                          <Sparkles className="w-4 h-4 text-amber-500 mr-2" /> 8. Underwriters, Anchors & Institutional Demand
+                        </h4>
+                        <div className="grid grid-cols-3 gap-2 text-xs p-3 bg-amber-50/50 rounded-lg border border-amber-100 text-center">
+                          <div><span className="text-gray-500 block">QIB Subscribed</span><strong className="text-amber-700">{data.memo.institutional_demand.qib_subscription}</strong></div>
+                          <div><span className="text-gray-500 block">NII Subscribed</span><strong className="text-gray-900">{data.memo.institutional_demand.nii_subscription}</strong></div>
+                          <div><span className="text-gray-500 block">Retail Subscribed</span><strong className="text-gray-900">{data.memo.institutional_demand.retail_subscription}</strong></div>
+                        </div>
+                      </div>
+
+                      {/* Section 10: Key Risks & Bear Case */}
                       <div>
                         <h4 className="font-bold text-gray-900 mb-2 flex items-center text-base">
-                          <AlertTriangle className="w-4 h-4 text-red-500 mr-2" /> 5. Key Risks & Bear Case
+                          <AlertTriangle className="w-4 h-4 text-red-500 mr-2" /> 9. Key Risks & Red Flags
                         </h4>
                         <ul className="space-y-1.5 text-xs">
-                          {data.memo.key_risks.map((risk: string, idx: number) => (
+                          {(data.memo.key_risks || []).map((risk: string, idx: number) => (
                             <li key={idx} className="flex items-start text-red-700 bg-red-50/60 p-2.5 rounded-lg border border-red-100">
                               <AlertCircle className="w-3.5 h-3.5 mr-2 mt-0.5 flex-shrink-0" />
                               {risk}
                             </li>
                           ))}
                         </ul>
+                      </div>
+
+                      {/* Section 11: Market Sentiment & GMP */}
+                      <div>
+                        <h4 className="font-bold text-gray-900 mb-1 flex items-center text-base">
+                          <TrendingUp className="w-4 h-4 text-purple-600 mr-2" /> 10. Market Sentiment & Bidding Dynamics
+                        </h4>
+                        <div className="text-xs p-3 bg-purple-50/50 rounded-lg border border-purple-100 flex justify-between items-center">
+                          <span>Sentiment Phase: <strong>{data.memo.market_sentiment_gmp.sentiment_phase}</strong></span>
+                          <span className="font-bold text-purple-800">QIB Demand: {data.memo.market_sentiment_gmp.qib_demand_mult}</span>
+                        </div>
+                      </div>
+
+                      {/* Section 12: Monitoring Triggers */}
+                      <div className="p-4 bg-orange-50/60 rounded-xl border border-orange-200 text-xs">
+                        <span className="font-bold text-orange-800 uppercase block mb-1">Post-Listing Monitoring Triggers</span>
+                        <p className="text-gray-700">{data.memo.recommendation_guidance.monitoring_triggers}</p>
                       </div>
                     </div>
                   )}
