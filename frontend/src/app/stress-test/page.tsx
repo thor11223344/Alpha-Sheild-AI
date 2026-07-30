@@ -20,12 +20,40 @@ import { StockSelector } from "@/components/StockSelector";
 const HelpTooltip = ({ text }: { text: string }) => (
   <span className="group relative inline-flex items-center ml-1.5 cursor-help">
     <Info className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
-    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-52 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-20 text-center font-normal leading-tight">
+    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-56 p-2.5 bg-gray-900 text-white text-xs rounded-lg shadow-xl z-20 text-center font-normal leading-tight">
       {text}
       <span className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900 block"></span>
     </span>
   </span>
 );
+
+const getModelDescription = (modelKey: string) => {
+  const key = modelKey?.toLowerCase();
+  if (key.includes("regime") || key.includes("hmm")) {
+    return "HMM Regime-Switching detects bull and bear market states to simulate realistic regime transitions.";
+  }
+  if (key.includes("merton") || key.includes("jump")) {
+    return "Merton Jump-Diffusion models continuous price drift plus random extreme market crash jumps.";
+  }
+  if (key.includes("gbm") || key.includes("brownian")) {
+    return "Multivariate Geometric Brownian Motion simulates continuous asset prices using correlated drift & volatility.";
+  }
+  return "Selected stochastic simulation model.";
+};
+
+const getSamplerDescription = (samplerKey: string) => {
+  const key = samplerKey?.toLowerCase();
+  if (key.includes("sobol") || key.includes("qmc")) {
+    return "Sobol Quasi-Monte Carlo generates deterministic low-discrepancy sequences for fast numerical convergence.";
+  }
+  if (key.includes("antithetic")) {
+    return "Antithetic Variates generates mirror-image random shocks to cancel out variance and reduce error.";
+  }
+  if (key.includes("standard") || key.includes("rng") || key.includes("none")) {
+    return "Standard Pseudo-RNG samples independent standard normal Gaussian random numbers.";
+  }
+  return "Selected variance reduction sampling engine.";
+};
 
 export default function StressTestPage() {
   const [loading, setLoading] = useState(false);
@@ -169,7 +197,7 @@ export default function StressTestPage() {
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center">
                 <Cpu className="w-3.5 h-3.5 text-blue-500 mr-1" /> Stochastic Model
-                <HelpTooltip text="HMM detects Bull/Bear regimes. Merton captures price jumps. GBM assumes continuous returns." />
+                <HelpTooltip text={getModelDescription(modelType)} />
               </label>
               <select
                 value={modelType}
@@ -185,7 +213,7 @@ export default function StressTestPage() {
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1 flex items-center">
                 <Zap className="w-3.5 h-3.5 text-orange-500 mr-1" /> Sampler Engine
-                <HelpTooltip text="Sobol QMC ensures uniform random space coverage for faster numerical convergence." />
+                <HelpTooltip text={getSamplerDescription(samplerType)} />
               </label>
               <select
                 value={samplerType}
@@ -456,7 +484,7 @@ export default function StressTestPage() {
               <div>
                 <span className="text-gray-500 uppercase font-semibold flex items-center mb-0.5">
                   Stochastic Process
-                  <HelpTooltip text="The mathematical model simulating how stock prices move over time." />
+                  <HelpTooltip text={getModelDescription(data?.model_metadata?.model_used || modelType)} />
                 </span>
                 <span className="font-bold text-gray-900">{data.model_metadata?.model_used}</span>
               </div>
@@ -464,7 +492,7 @@ export default function StressTestPage() {
               <div>
                 <span className="text-gray-500 uppercase font-semibold flex items-center mb-0.5">
                   Sampler Method
-                  <HelpTooltip text="The sampling technique used for path shocks (e.g. Sobol QMC)." />
+                  <HelpTooltip text={getSamplerDescription(data?.model_metadata?.sampler_used || samplerType)} />
                 </span>
                 <span className="font-bold text-blue-600">{data.model_metadata?.sampler_used}</span>
               </div>
