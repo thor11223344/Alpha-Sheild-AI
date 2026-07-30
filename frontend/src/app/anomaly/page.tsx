@@ -12,7 +12,8 @@ import {
   Trash2, 
   Plus, 
   Palette,
-  X
+  X,
+  Target
 } from "lucide-react";
 import {
   LineChart,
@@ -39,10 +40,10 @@ interface HorizontalLine {
 
 interface FreestyleLine {
   id: string;
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
+  date1: string;
+  price1: number;
+  date2: string;
+  price2: number;
   color: string;
 }
 
@@ -58,11 +59,11 @@ export default function AnomalyPage() {
   const [lineColor, setLineColor] = useState<string>("#10b981"); // Default Emerald Green
   const [horizontalLines, setHorizontalLines] = useState<HorizontalLine[]>([]);
   const [freestyleLines, setFreestyleLines] = useState<FreestyleLine[]>([]);
-  const [drawingStart, setDrawingStart] = useState<{ x: number; y: number } | null>(null);
-  const [currentDraftLine, setCurrentDraftLine] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  
+  // Recharts Point Snapping States
+  const [freestyleStart, setFreestyleStart] = useState<{ date: string; price: number } | null>(null);
+  const [freestyleDraft, setFreestyleDraft] = useState<{ date1: string; price1: number; date2: string; price2: number } | null>(null);
   const [manualPrice, setManualPrice] = useState<string>("");
-
-  const chartContainerRef = useRef<HTMLDivElement>(null);
 
   const fetchData = async () => {
     const cleanTicker = ticker.toUpperCase().replace(/\.NS$/i, "");
@@ -73,6 +74,8 @@ export default function AnomalyPage() {
       setData(response.data);
       setHorizontalLines([]);
       setFreestyleLines([]);
+      setFreestyleStart(null);
+      setFreestyleDraft(null);
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to fetch data.");
     } finally {
@@ -96,67 +99,54 @@ export default function AnomalyPage() {
     setManualPrice("");
   };
 
-  // Canvas Click Handler for Horizontal & Freestyle drawing
-  const handleChartClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!chartContainerRef.current || !data?.data?.length) return;
-    const rect = chartContainerRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
+  // 100% Accurate Recharts Click Handler with Automatic Price/Date Snapping
+  const handleRechartsClick = (chartState: any) => {
+    if (!chartState || drawMode === "pointer") return;
+
+    const activeItem = chartState.activePayload?.[0]?.payload;
 
     if (drawMode === "horizontal") {
-      // Calculate Price based on click height
-      const prices = data.data.map((d: any) => d.close);
-      const minP = Math.min(...prices);
-      const maxP = Math.max(...prices);
-      const priceRange = maxP - minP || 1;
-      
-      // Top padding ~10%, bottom ~10%
-      const chartTop = rect.height * 0.05;
-      const chartHeight = rect.height * 0.85;
-      const relativeY = Math.max(0, Math.min(1, (clickY - chartTop) / chartHeight));
-      const calculatedPrice = roundToTwo(maxP - relativeY * priceRange);
-
+      if (!activeItem) return;
+      const targetPrice = roundToTwo(activeItem.close);
       setHorizontalLines((prev) => [
         ...prev,
         {
           id: Math.random().toString(),
-          price: calculatedPrice,
+          price: targetPrice,
           color: lineColor,
-          label: calculatedPrice > (data.data[data.data.length - 1]?.close || 0) ? "Resistance" : "Support"
+          label: targetPrice > (data?.data?.[data.data.length - 1]?.close || 0) ? "Resistance" : "Support"
         }
       ]);
     } else if (drawMode === "freestyle") {
-      if (!drawingStart) {
-        setDrawingStart({ x: clickX, y: clickY });
-        setCurrentDraftLine({ x1: clickX, y1: clickY, x2: clickX, y2: clickY });
+      if (!activeItem) return;
+      if (!freestyleStart) {
+        setFreestyleStart({ date: activeItem.date, price: activeItem.close });
       } else {
         setFreestyleLines((prev) => [
           ...prev,
           {
             id: Math.random().toString(),
-            x1: drawingStart.x,
-            y1: drawingStart.y,
-            x2: clickX,
-            y2: clickY,
+            date1: freestyleStart.date,
+            price1: freestyleStart.price,
+            date2: activeItem.date,
+            price2: activeItem.close,
             color: lineColor
           }
         ]);
-        setDrawingStart(null);
-        setCurrentDraftLine(null);
+        setFreestyleStart(null);
+        setFreestyleDraft(null);
       }
     }
   };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (drawMode === "freestyle" && drawingStart && chartContainerRef.current) {
-      const rect = chartContainerRef.current.getBoundingClientRect();
-      const moveX = e.clientX - rect.left;
-      const moveY = e.clientY - rect.top;
-      setCurrentDraftLine({
-        x1: drawingStart.x,
-        y1: drawingStart.y,
-        x2: moveX,
-        y2: moveY
+  const handleRechartsMouseMove = (chartState: any) => {
+    if (drawMode === "freestyle" && freestyleStart && chartState?.activePayload?.[0]?.payload) {
+      const activeItem = chartState.activePayload[0].payload;
+      setFreestyleDraft({
+        date1: freestyleStart.date,
+        price1: freestyleStart.price,
+        date2: activeItem.date,
+        price2: activeItem.close
       });
     }
   };
@@ -174,8 +164,8 @@ export default function AnomalyPage() {
   const clearAllLines = () => {
     setHorizontalLines([]);
     setFreestyleLines([]);
-    setDrawingStart(null);
-    setCurrentDraftLine(null);
+    setFreestyleStart(null);
+    setFreestyleDraft(null);
   };
 
   return (
@@ -244,14 +234,19 @@ export default function AnomalyPage() {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-4">
             <div className="flex justify-between items-center flex-wrap gap-4 border-b pb-4">
               <div>
-                <h3 className="text-lg font-bold text-gray-800">Price & Volume History ({period === '3y' ? '3 Years' : period === '5y' ? '5 Years' : '1 Year'})</h3>
-                <p className="text-xs text-gray-500">Historical closing prices with daily trading volume and interactive trendline drawing tools</p>
+                <h3 className="text-lg font-bold text-gray-800 flex items-center">
+                  Price & Volume History ({period === '3y' ? '3 Years' : period === '5y' ? '5 Years' : '1 Year'})
+                  <span className="ml-2 text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-semibold flex items-center">
+                    <Target className="w-3 h-3 mr-1" /> Precision Snap Active
+                  </span>
+                </h3>
+                <p className="text-xs text-gray-500">Click anywhere on graph candles to place exact support, resistance, and trendlines</p>
               </div>
 
               {/* Drawing Toolbar */}
               <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-xl border border-gray-200 flex-wrap">
                 <button
-                  onClick={() => setDrawMode("pointer")}
+                  onClick={() => { setDrawMode("pointer"); setFreestyleStart(null); setFreestyleDraft(null); }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center transition ${
                     drawMode === "pointer" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-800"
                   }`}
@@ -260,7 +255,7 @@ export default function AnomalyPage() {
                 </button>
 
                 <button
-                  onClick={() => setDrawMode("horizontal")}
+                  onClick={() => { setDrawMode("horizontal"); setFreestyleStart(null); setFreestyleDraft(null); }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center transition ${
                     drawMode === "horizontal" ? "bg-sky-500 text-white shadow-sm" : "text-gray-600 hover:text-gray-900"
                   }`}
@@ -269,7 +264,7 @@ export default function AnomalyPage() {
                 </button>
 
                 <button
-                  onClick={() => setDrawMode("freestyle")}
+                  onClick={() => { setDrawMode("freestyle"); setFreestyleStart(null); setFreestyleDraft(null); }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center transition ${
                     drawMode === "freestyle" ? "bg-purple-600 text-white shadow-sm" : "text-gray-600 hover:text-gray-900"
                   }`}
@@ -323,57 +318,24 @@ export default function AnomalyPage() {
             {drawMode !== "pointer" && (
               <div className="bg-sky-50 border border-sky-200 text-sky-800 text-xs px-4 py-2 rounded-lg flex justify-between items-center">
                 <span>
-                  {drawMode === "horizontal" && "💡 Click anywhere on the chart canvas (or type price above) to place a horizontal Support/Resistance line."}
-                  {drawMode === "freestyle" && (drawingStart ? "💡 Click endpoint (Point 2) to finish drawing the trendline." : "💡 Click start point (Point 1) on chart to begin trendline.")}
+                  {drawMode === "horizontal" && "🎯 Click any candle on the graph (or type exact price above) to snap a Horizontal Support/Resistance line to that exact Closing Price."}
+                  {drawMode === "freestyle" && (freestyleStart ? `🎯 Click Point 2 (End Date & Price) to complete trendline starting from ${freestyleStart.date} (₹${freestyleStart.price}).` : "🎯 Click Point 1 (Start Date & Price) on the chart line to begin drawing freestyle trendline.")}
                 </span>
-                <button onClick={() => setDrawMode("pointer")} className="text-sky-600 hover:text-sky-900 font-bold text-xs underline">
+                <button onClick={() => { setDrawMode("pointer"); setFreestyleStart(null); setFreestyleDraft(null); }} className="text-sky-600 hover:text-sky-900 font-bold text-xs underline">
                   Exit Draw Mode
                 </button>
               </div>
             )}
 
             {/* Interactive Chart Container */}
-            <div 
-              ref={chartContainerRef}
-              onClick={handleChartClick}
-              onMouseMove={handleMouseMove}
-              className={`h-[480px] relative rounded-xl transition ${drawMode !== "pointer" ? "cursor-crosshair ring-2 ring-sky-300" : ""}`}
-            >
-              {/* Overlay SVG for Freestyle Lines */}
-              <svg className="absolute inset-0 w-full h-full pointer-events-none z-20">
-                {freestyleLines.map((line) => (
-                  <g key={line.id}>
-                    <line 
-                      x1={line.x1} 
-                      y1={line.y1} 
-                      x2={line.x2} 
-                      y2={line.y2} 
-                      stroke={line.color} 
-                      strokeWidth={2.5} 
-                      strokeDasharray="4 4"
-                    />
-                    <circle cx={line.x1} cy={line.y1} r={4.5} fill={line.color} stroke="#fff" strokeWidth={1.5} />
-                    <circle cx={line.x2} cy={line.y2} r={4.5} fill={line.color} stroke="#fff" strokeWidth={1.5} />
-                  </g>
-                ))}
-                {currentDraftLine && (
-                  <g>
-                    <line 
-                      x1={currentDraftLine.x1} 
-                      y1={currentDraftLine.y1} 
-                      x2={currentDraftLine.x2} 
-                      y2={currentDraftLine.y2} 
-                      stroke={lineColor} 
-                      strokeWidth={2} 
-                      strokeDasharray="3 3"
-                    />
-                    <circle cx={currentDraftLine.x1} cy={currentDraftLine.y1} r={4} fill={lineColor} />
-                  </g>
-                )}
-              </svg>
-
+            <div className={`h-[480px] relative rounded-xl transition ${drawMode !== "pointer" ? "cursor-crosshair ring-2 ring-sky-400" : ""}`}>
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={data.data} margin={{ top: 15, right: 20, left: 15, bottom: 25 }}>
+                <ComposedChart 
+                  data={data.data} 
+                  margin={{ top: 15, right: 25, left: 15, bottom: 25 }}
+                  onClick={handleRechartsClick}
+                  onMouseMove={handleRechartsMouseMove}
+                >
                   <CartesianGrid strokeDasharray="3 3" opacity={0.2} vertical={false} />
                   <XAxis 
                     dataKey="date" 
@@ -411,7 +373,7 @@ export default function AnomalyPage() {
                     hide 
                   />
 
-                  {/* Horizontal User-Placed Lines */}
+                  {/* Horizontal User-Placed Lines (Precise Price ReferenceLines) */}
                   {horizontalLines.map((line) => (
                     <ReferenceLine 
                       key={line.id} 
@@ -429,6 +391,35 @@ export default function AnomalyPage() {
                       }}
                     />
                   ))}
+
+                  {/* Freestyle Trendlines (Precise Recharts Segment ReferenceLines) */}
+                  {freestyleLines.map((line) => (
+                    <ReferenceLine 
+                      key={line.id} 
+                      yAxisId="left" 
+                      segment={[
+                        { x: line.date1, y: line.price1 }, 
+                        { x: line.date2, y: line.price2 }
+                      ]} 
+                      stroke={line.color} 
+                      strokeWidth={2.5} 
+                      strokeDasharray="4 4"
+                    />
+                  ))}
+
+                  {/* Live Freestyle Drawing Draft Preview */}
+                  {freestyleDraft && (
+                    <ReferenceLine 
+                      yAxisId="left" 
+                      segment={[
+                        { x: freestyleDraft.date1, y: freestyleDraft.price1 }, 
+                        { x: freestyleDraft.date2, y: freestyleDraft.price2 }
+                      ]} 
+                      stroke={lineColor} 
+                      strokeWidth={2} 
+                      strokeDasharray="3 3"
+                    />
+                  )}
 
                   {drawMode === "pointer" && (
                     <Tooltip 
@@ -519,7 +510,7 @@ export default function AnomalyPage() {
                       style={{ borderColor: line.color }}
                     >
                       <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: line.color }} />
-                      <span className="font-semibold text-gray-800">Freestyle Trend #{idx + 1}</span>
+                      <span className="font-semibold text-gray-800">Freestyle: {line.date1} (₹{line.price1}) ➔ {line.date2} (₹{line.price2})</span>
                       <button onClick={() => removeFreestyleLine(line.id)} className="text-gray-400 hover:text-red-600">
                         <X className="w-3.5 h-3.5" />
                       </button>
