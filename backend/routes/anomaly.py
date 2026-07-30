@@ -7,7 +7,7 @@ import numpy as np
 router = APIRouter()
 
 @router.get("/")
-def get_anomaly_screener(ticker: str, period: str = "1y"):
+def get_anomaly_screener(ticker: str, period: str = "3y"):
     try:
         # Fetch and prepare data
         df = get_nse_data(ticker, period=period)
@@ -67,8 +67,9 @@ def get_anomaly_screener(ticker: str, period: str = "1y"):
                 "explanation": explanation
             })
             
+        clean_ticker = ticker.upper().replace(".NS", "")
         return {
-            "ticker": ticker.upper(),
+            "ticker": clean_ticker,
             "data": results,
             "anomaly_count": len(anomalies)
         }

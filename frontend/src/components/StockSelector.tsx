@@ -9,12 +9,19 @@ interface Stock {
 
 interface StockSelectorProps {
   value: string;
-  onChange: (value: string) => void;
+  onChange: (symbol: string, name?: string) => void;
   placeholder?: string;
   className?: string;
+  inputClassName?: string;
 }
 
-export function StockSelector({ value, onChange, placeholder = "Search NSE Ticker...", className = "" }: StockSelectorProps) {
+export function StockSelector({ 
+  value, 
+  onChange, 
+  placeholder = "Search NSE Ticker or Company Name...", 
+  className = "",
+  inputClassName = "w-full px-4 py-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
+}: StockSelectorProps) {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [query, setQuery] = useState(value);
   const [isOpen, setIsOpen] = useState(false);
@@ -64,37 +71,45 @@ export function StockSelector({ value, onChange, placeholder = "Search NSE Ticke
           type="text"
           value={query}
           onChange={(e) => {
-            setQuery(e.target.value);
+            const val = e.target.value.toUpperCase().replace(/\.NS$/i, "");
+            setQuery(val);
             setIsOpen(true);
-            onChange(e.target.value); // Optimistically set it in parent as well
+            const match = stocks.find(s => s.symbol.toUpperCase() === val);
+            onChange(val, match?.name);
           }}
           onFocus={() => setIsOpen(true)}
-          placeholder={loading ? "Loading stocks..." : placeholder}
-          className="w-full px-4 py-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
+          placeholder={loading ? "Loading stock directory..." : placeholder}
+          className={inputClassName}
           disabled={loading}
         />
-        <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+        <Search className="w-4 h-4 absolute left-3 top-3.5 text-gray-400 pointer-events-none" />
       </div>
 
       {isOpen && stocks.length > 0 && (
-        <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto left-0">
           {filteredStocks.length === 0 ? (
-            <div className="p-3 text-sm text-gray-500 text-center">No stocks found.</div>
+            <div className="p-3 text-sm text-gray-500 text-center">No stocks found matching "{query}"</div>
           ) : (
-            filteredStocks.map((stock) => (
-              <div
-                key={stock.symbol}
-                onClick={() => {
-                  onChange(stock.symbol);
-                  setQuery(stock.symbol);
-                  setIsOpen(false);
-                }}
-                className="px-4 py-2 hover:bg-gray-50 cursor-pointer flex justify-between items-center border-b last:border-b-0"
-              >
-                <span className="font-bold text-sm text-gray-800">{stock.symbol}</span>
-                <span className="text-xs text-gray-500 truncate max-w-[60%] text-right">{stock.name}</span>
-              </div>
-            ))
+            filteredStocks.map((stock) => {
+              const cleanSymbol = stock.symbol.toUpperCase().replace(/\.NS$/i, "");
+              return (
+                <div
+                  key={stock.symbol}
+                  onClick={() => {
+                    onChange(cleanSymbol, stock.name);
+                    setQuery(cleanSymbol);
+                    setIsOpen(false);
+                  }}
+                  className="px-4 py-2.5 hover:bg-sky-50 cursor-pointer flex justify-between items-center border-b border-gray-100 last:border-b-0 transition-colors"
+                >
+                  <div className="flex flex-col">
+                    <span className="font-bold text-sm text-gray-900">{cleanSymbol}</span>
+                    <span className="text-xs text-gray-500 truncate max-w-xs">{stock.name}</span>
+                  </div>
+                  <span className="text-xs font-semibold px-2 py-0.5 bg-gray-100 text-gray-600 rounded">NSE</span>
+                </div>
+              );
+            })
           )}
         </div>
       )}

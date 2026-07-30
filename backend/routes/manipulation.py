@@ -14,7 +14,8 @@ def fetch_news_sentiment(ticker: str) -> dict:
     """
     Fetch recent news for a ticker using Google News RSS and calculate sentiment.
     """
-    query = urllib.parse.quote(f"{ticker} NSE stock")
+    clean_ticker = ticker.upper().replace(".NS", "")
+    query = urllib.parse.quote(f"{clean_ticker} NSE stock")
     url = f"https://news.google.com/rss/search?q={query}&hl=en-IN&gl=IN&ceid=IN:en"
     
     feed = feedparser.parse(url)
@@ -101,8 +102,9 @@ def get_manipulation_detector(ticker: str):
         elif manipulation_score > 40:
             risk_level = "Medium"
             
+        clean_ticker = ticker.upper().replace(".NS", "")
         return {
-            "ticker": ticker.upper(),
+            "ticker": clean_ticker,
             "risk_level": risk_level,
             "manipulation_score": min(manipulation_score, 100),
             "indicators": indicators,

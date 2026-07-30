@@ -61,49 +61,73 @@ def run_stress_test(portfolio: PortfolioInput):
             portfolio_returns[ticker] = df['Return']
             
         portfolio_returns = portfolio_returns.dropna()
-        
-        # Calculate historical daily portfolio returns
         weights = np.array(portfolio.weights)
-        daily_portfolio_returns = portfolio_returns.dot(weights)
         
-        # Portfolio stats
-        port_mean = daily_portfolio_returns.mean()
-        port_std = daily_portfolio_returns.std()
+        # Calculate historical stats
+        mean_returns = portfolio_returns.mean().values
+        cov_matrix = portfolio_returns.cov().values
         
-        # 3. Monte Carlo Simulation conditioned on Regime
+        # 3. Advanced Monte Carlo Simulation conditioned on Regime
         # Adjust drift and volatility based on the detected regime multiplier relative to history
-        drift = port_mean * (1 if is_bull_market else -0.5)
-        volatility = port_std * (1 if is_bull_market else 1.5)
+        drift = mean_returns * (1 if is_bull_market else -0.5)
+        vol_scalar = 1.0 if is_bull_market else 1.5
+        adjusted_cov_matrix = cov_matrix * (vol_scalar ** 2)
         
-        num_simulations = 500
+        # Cholesky decomposition for correlated random variables
+        try:
+            L = np.linalg.cholesky(adjusted_cov_matrix)
+        except np.linalg.LinAlgError:
+            # Add small ridge if matrix is not positive definite
+            ridge = np.eye(len(weights)) * 1e-6
+            L = np.linalg.cholesky(adjusted_cov_matrix + ridge)
+        
+        num_simulations = 1000
         forecast_days = 30
         initial_value = 100000  # Assume 1 Lakh starting portfolio value
         
         simulations = []
         
         for _ in range(num_simulations):
-            # Geometric Brownian Motion
-            daily_returns = np.random.normal(drift, volatility, forecast_days)
-            price_paths = initial_value * np.cumprod(1 + daily_returns)
-            simulations.append(price_paths.tolist())
+            # Generate uncorrelated random normal variables (days x assets)
+            Z = np.random.normal(size=(forecast_days, len(weights)))
+            
+            # Correlate them using Cholesky lower triangle
+            daily_asset_returns = drift + Z.dot(L.T)
+            
+            # Calculate daily portfolio return
+            daily_port_returns = daily_asset_returns.dot(weights)
+            
+            # Calculate price path
+            price_paths = initial_value * np.cumprod(1 + daily_port_returns)
+            # Prepend initial value
+            path = np.insert(price_paths, 0, initial_value)
+            simulations.append(path.tolist())
             
         # Calculate Risk Metrics
         final_values = [path[-1] for path in simulations]
+        
         var_95 = np.percentile(final_values, 5)
+        
+        # CVaR (Expected Shortfall) is the average of values worse than VaR
+        worse_than_var = [v for v in final_values if v <= var_95]
+        cvar_95 = np.mean(worse_than_var) if worse_than_var else var_95
+        
         max_drawdown = (initial_value - min(final_values)) / initial_value if min(final_values) < initial_value else 0
         
-        # To reduce payload size, we'll only send a subset of paths (e.g., 20) and the percentiles for the UI fan chart
+        # To reduce payload size, we'll only send a subset of paths (e.g., 20) for the UI background
         paths_for_ui = simulations[:20]
         
         percentiles = []
         simulations_array = np.array(simulations)
-        for day in range(forecast_days):
+        for day in range(forecast_days + 1):
             day_values = simulations_array[:, day]
             percentiles.append({
-                "day": day + 1,
-                "p10": np.percentile(day_values, 10),
+                "day": day,
+                "p5": np.percentile(day_values, 5),
+                "p25": np.percentile(day_values, 25),
                 "p50": np.percentile(day_values, 50),
-                "p90": np.percentile(day_values, 90)
+                "p75": np.percentile(day_values, 75),
+                "p95": np.percentile(day_values, 95)
             })
 
         return {
@@ -114,6 +138,7 @@ def run_stress_test(portfolio: PortfolioInput):
             },
             "risk_metrics": {
                 "var_95_value": float(var_95),
+                "cvar_95_value": float(cvar_95),
                 "max_drawdown_percent": float(max_drawdown * 100)
             },
             "simulation": {

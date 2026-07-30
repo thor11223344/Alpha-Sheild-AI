@@ -4,6 +4,8 @@ import { useState } from "react";
 import axios from "axios";
 import { AlertTriangle, Search, AlertCircle, TrendingUp, Newspaper } from "lucide-react";
 
+import { StockSelector } from "@/components/StockSelector";
+
 export default function ManipulationPage() {
   const [ticker, setTicker] = useState("SUZLON");
   const [loading, setLoading] = useState(false);
@@ -11,10 +13,11 @@ export default function ManipulationPage() {
   const [error, setError] = useState("");
 
   const fetchData = async () => {
+    const cleanTicker = ticker.toUpperCase().replace(/\.NS$/i, "");
     setLoading(true);
     setError("");
     try {
-      const response = await axios.get(`http://localhost:8000/api/manipulation/?ticker=${ticker}`);
+      const response = await axios.get(`http://localhost:8000/api/manipulation/?ticker=${cleanTicker}`);
       setData(response.data);
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to fetch data.");
@@ -34,13 +37,12 @@ export default function ManipulationPage() {
       </div>
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
-        <div className="flex gap-4">
-          <input
-            type="text"
+        <div className="flex gap-4 items-center">
+          <StockSelector
             value={ticker}
-            onChange={(e) => setTicker(e.target.value.toUpperCase())}
-            placeholder="Enter NSE Ticker (e.g., SUZLON)"
-            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+            onChange={(sym) => setTicker(sym)}
+            placeholder="Search stock ticker or company name (e.g. SUZLON, Reliance)..."
+            inputClassName="w-full px-4 py-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
           />
           <button
             onClick={fetchData}

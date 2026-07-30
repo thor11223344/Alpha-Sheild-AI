@@ -7,7 +7,8 @@ def get_nse_data(ticker: str, period: str = "1y") -> pd.DataFrame:
     Fetch historical data for an NSE stock.
     Appends '.NS' to the ticker to query Yahoo Finance for Indian stocks.
     """
-    nse_ticker = f"{ticker.upper()}.NS"
+    clean_symbol = ticker.upper().replace(".NS", "")
+    nse_ticker = f"{clean_symbol}.NS"
     stock = yf.Ticker(nse_ticker)
     
     # Fetch historical data
