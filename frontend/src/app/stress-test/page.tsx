@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
-import { TrendingDown, Play, AlertCircle, Trash2, Plus } from "lucide-react";
+import { TrendingDown, Play, AlertCircle, Trash2, Plus, Info, ChevronDown, ChevronUp, ShieldAlert, ShieldCheck, Shield } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -15,39 +15,61 @@ import {
   Area
 } from "recharts";
 
+import { StockSelector } from "@/components/StockSelector";
+
+// A simple tooltip component
+const HelpTooltip = ({ text }: { text: string }) => (
+  <div className="group relative inline-flex items-center ml-1 cursor-help">
+    <Info className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-10 text-center">
+      {text}
+      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-800"></div>
+    </div>
+  </div>
+);
+
 export default function StressTestPage() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState("");
+  const [showTechDetails, setShowTechDetails] = useState(false);
   
+  const [initialValue, setInitialValue] = useState<number>(100000);
   const [portfolio, setPortfolio] = useState([
-    { ticker: "RELIANCE", weight: 40 },
-    { ticker: "TCS", weight: 40 },
-    { ticker: "HDFCBANK", weight: 20 }
+    { ticker: "RELIANCE", name: "Reliance Industries", weight: 40 },
+    { ticker: "TCS", name: "Tata Consultancy Services", weight: 40 },
+    { ticker: "HDFCBANK", name: "HDFC Bank", weight: 20 }
   ]);
 
   const handleWeightChange = (index: number, val: string) => {
     const newPort = [...portfolio];
     newPort[index].weight = Number(val);
     setPortfolio(newPort);
+    setData(null);
   };
 
-  const handleTickerChange = (index: number, val: string) => {
+  const handleTickerChange = (index: number, val: string, companyName?: string) => {
+    const cleanVal = val.toUpperCase().replace(/\.NS$/i, "");
     const newPort = [...portfolio];
-    newPort[index].ticker = val.toUpperCase();
+    newPort[index].ticker = cleanVal;
+    newPort[index].name = companyName || cleanVal;
     setPortfolio(newPort);
+    setData(null);
   };
 
   const removeRow = (index: number) => {
     setPortfolio(portfolio.filter((_, i) => i !== index));
+    setData(null);
   };
 
   const addRow = () => {
-    setPortfolio([...portfolio, { ticker: "", weight: 0 }]);
+    setPortfolio([...portfolio, { ticker: "", name: "", weight: 0 }]);
+    setData(null);
   };
 
+  const totalWeight = portfolio.reduce((sum, item) => sum + item.weight, 0);
+
   const runSimulation = async () => {
-    const totalWeight = portfolio.reduce((sum, item) => sum + item.weight, 0);
     if (Math.abs(totalWeight - 100) > 1) {
       setError("Total weights must equal exactly 100%");
       return;
@@ -57,12 +79,17 @@ export default function StressTestPage() {
     setError("");
     try {
       const payload = {
-        tickers: portfolio.map(p => p.ticker),
-        weights: portfolio.map(p => p.weight / 100) // convert to decimals
+        tickers: portfolio.map(p => p.ticker.toUpperCase().replace(/\.NS$/i, "")),
+        weights: portfolio.map(p => p.weight / 100), // convert to decimals
+        initial_value: initialValue
       };
       
       const response = await axios.post("http://localhost:8000/api/portfolio-stress/", payload);
       setData(response.data);
+      // Scroll to results
+      setTimeout(() => {
+        document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to run simulation.");
     } finally {
@@ -70,141 +97,332 @@ export default function StressTestPage() {
     }
   };
 
+  const chartData = data?.simulation?.percentiles.map((p: any, i: number) => {
+    const dataPoint = { ...p, p10_p90: [p.p10, p.p90] };
+    data?.simulation?.sample_paths?.forEach((path: number[], pathIndex: number) => {
+      dataPoint[`path_${pathIndex}`] = path[i];
+    });
+    return dataPoint;
+  });
+
+  const formatCurrency = (val: number) => `₹${Math.round(val).toLocaleString('en-IN')}`;
+
+  const getRiskIcon = (label: string) => {
+    if (label.includes("Low")) return <ShieldCheck className="w-8 h-8 text-green-500" />;
+    if (label.includes("Moderate")) return <Shield className="w-8 h-8 text-yellow-500" />;
+    if (label.includes("Very High")) return <ShieldAlert className="w-8 h-8 text-red-600" />;
+    return <ShieldAlert className="w-8 h-8 text-orange-500" />;
+  };
+
+  const getRiskColor = (colorStr: string) => {
+    switch (colorStr) {
+      case 'green': return 'bg-green-100 text-green-800 border-green-200';
+      case 'yellow': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'orange': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'red': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold flex items-center mb-2">
-          <TrendingDown className="w-8 h-8 mr-3 text-emerald-500" />
-          Regime-Aware Portfolio Stress Tester
-        </h1>
-        <p className="text-gray-600">Simulate portfolio performance under current market regimes (Bull/Bear) using Monte Carlo.</p>
+    <div className="p-8 max-w-6xl mx-auto">
+      <div className="mb-10 text-center max-w-2xl mx-auto">
+        <div className="inline-flex items-center justify-center p-3 bg-emerald-100 rounded-full mb-4">
+          <TrendingDown className="w-8 h-8 text-emerald-600" />
+        </div>
+        <h1 className="text-4xl font-extrabold text-gray-900 mb-4">Portfolio Stress Tester</h1>
+        <p className="text-lg text-gray-600">
+          See how your investments might hold up during market crashes. We simulate 10,000 alternate futures using advanced math to give you simple, actionable insights.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Input Form */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <h3 className="text-lg font-bold mb-4">Portfolio Allocation</h3>
-            
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden mb-12">
+        <div className="p-8 bg-gray-50/50 border-b border-gray-100">
+          <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-gray-200 shadow-sm max-w-3xl">
+            <div>
+              <label className="block text-sm font-bold text-gray-800 mb-0.5">
+                Total Investment Capital
+              </label>
+              <p className="text-xs text-gray-500">Set the principal amount to run the Monte Carlo simulation against</p>
+            </div>
+            <div className="relative w-full md:w-56">
+              <span className="absolute left-3.5 top-2.5 text-gray-500 font-bold">₹</span>
+              <input
+                type="text"
+                value={initialValue ? initialValue.toLocaleString('en-IN') : ''}
+                onChange={(e) => {
+                  const rawVal = e.target.value.replace(/,/g, '').replace(/\D/g, '');
+                  const num = Number(rawVal);
+                  setInitialValue(num);
+                  setData(null);
+                }}
+                placeholder="1,00,000"
+                className="w-full pl-8 pr-4 py-2 border border-gray-200 rounded-lg font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+              />
+            </div>
+          </div>
+
+          <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-sm mr-3">1</span>
+            What's in your portfolio?
+          </h2>
+          
+          <div className="space-y-4 max-w-3xl">
             {portfolio.map((item, i) => (
-              <div key={i} className="flex gap-2 mb-3">
-                <input
-                  type="text"
-                  value={item.ticker}
-                  onChange={(e) => handleTickerChange(i, e.target.value)}
-                  placeholder="Ticker"
-                  className="flex-1 px-3 py-2 border rounded-md text-sm"
-                />
-                <div className="relative w-24">
-                  <input
-                    type="number"
-                    value={item.weight}
-                    onChange={(e) => handleWeightChange(i, e.target.value)}
-                    className="w-full px-3 py-2 border rounded-md text-sm pr-6"
+              <div key={i} className="flex gap-4 items-center">
+                <div className="flex-1">
+                  <StockSelector
+                    value={item.ticker}
+                    onChange={(sym, name) => handleTickerChange(i, sym, name)}
+                    placeholder="Search Stock Symbol or Company Name (e.g., RELIANCE)..."
+                    inputClassName="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
                   />
-                  <span className="absolute right-3 top-2.5 text-gray-400 text-sm">%</span>
                 </div>
-                <button onClick={() => removeRow(i)} className="p-2 text-red-500 hover:bg-red-50 rounded-md">
-                  <Trash2 className="w-4 h-4" />
+                <div className="w-48">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={item.weight}
+                      onChange={(e) => handleWeightChange(i, e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition pr-8"
+                    />
+                    <span className="absolute right-4 top-3.5 text-gray-400 font-medium">%</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => removeRow(i)} 
+                  className="p-3 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                  title="Remove stock"
+                >
+                  <Trash2 className="w-5 h-5" />
                 </button>
               </div>
             ))}
             
-            <button onClick={addRow} className="w-full py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 hover:border-gray-400 hover:text-gray-700 flex items-center justify-center text-sm font-medium mb-4">
-              <Plus className="w-4 h-4 mr-2" /> Add Asset
-            </button>
-            
-            <div className="flex justify-between items-center text-sm mb-6 pb-4 border-b">
-              <span className="font-medium text-gray-600">Total Weight:</span>
-              <span className={`font-bold ${portfolio.reduce((sum, item) => sum + item.weight, 0) === 100 ? 'text-green-600' : 'text-red-500'}`}>
-                {portfolio.reduce((sum, item) => sum + item.weight, 0)}%
-              </span>
-            </div>
-            
-            <button
-              onClick={runSimulation}
-              disabled={loading}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-lg flex items-center justify-center font-medium disabled:opacity-50 transition"
+            <button 
+              onClick={addRow} 
+              className="py-3 px-4 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium flex items-center transition"
             >
-              {loading ? "Simulating..." : <><Play className="w-4 h-4 mr-2" /> Run Monte Carlo</>}
+              <Plus className="w-4 h-4 mr-1.5" /> Add another stock
             </button>
-            
-            {error && (
-              <div className="mt-4 text-sm text-red-600 flex items-start">
-                <AlertCircle className="w-4 h-4 mr-1 mt-0.5 flex-shrink-0" />
-                {error}
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Right Column: Results */}
-        <div className="lg:col-span-2 space-y-6">
-          {data ? (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Detected Regime</h4>
-                  <p className="text-xl font-bold text-emerald-600">{data.regime.name}</p>
-                  <p className="text-xs text-gray-500 mt-2">Based on Nifty 50 HMM</p>
-                </div>
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Est. Max Drawdown</h4>
-                  <p className="text-2xl font-bold text-red-500">{data.risk_metrics.max_drawdown_percent.toFixed(2)}%</p>
-                  <p className="text-xs text-gray-500 mt-2">Over 30 days</p>
-                </div>
-                <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">VaR (95%)</h4>
-                  <p className="text-2xl font-bold text-orange-500">₹{Math.round(data.simulation.initial_value - data.risk_metrics.var_95_value).toLocaleString()}</p>
-                  <p className="text-xs text-gray-500 mt-2">Potential Loss Value</p>
-                </div>
+        <div className="p-8">
+          <div className="flex flex-col md:flex-row justify-between items-center max-w-3xl">
+            <div className="mb-4 md:mb-0">
+              <h2 className="text-xl font-bold text-gray-800 flex items-center mb-1">
+                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-sm mr-3">2</span>
+                Check your allocation
+              </h2>
+              <p className="text-gray-500 ml-11 text-sm">Total must equal 100%</p>
+            </div>
+            
+            <div className="flex items-center gap-6">
+              <div className="text-right">
+                <span className="block text-sm text-gray-500">Total Weight</span>
+                <span className={`text-2xl font-bold ${totalWeight === 100 ? 'text-green-500' : 'text-red-500'}`}>
+                  {totalWeight}%
+                </span>
               </div>
-
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <h3 className="text-lg font-bold mb-1">30-Day Simulation Fan Chart</h3>
-                <p className="text-sm text-gray-500 mb-6">Showing 10th, 50th, and 90th percentiles of 500 simulated paths.</p>
-                
-                <div className="h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={data.simulation.percentiles}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                      <XAxis dataKey="day" label={{ value: 'Days', position: 'insideBottom', offset: -5 }} />
-                      <YAxis domain={['auto', 'auto']} tickFormatter={(val) => `₹${(val/1000).toFixed(0)}k`} />
-                      <Tooltip formatter={(value: number) => `₹${Math.round(value).toLocaleString()}`} />
-                      
-                      {/* P90 to P10 Band */}
-                      <Area 
-                        type="monotone" 
-                        dataKey="p90" 
-                        stroke="none" 
-                        fill="#d1fae5" 
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="p10" 
-                        stroke="none" 
-                        fill="#fff" // Hack to create a band by drawing white over the bottom part
-                      />
-                      
-                      {/* Median Line */}
-                      <Line type="monotone" dataKey="p50" stroke="#10b981" strokeWidth={3} dot={false} />
-                      <Line type="monotone" dataKey="p10" stroke="#ef4444" strokeWidth={1} strokeDasharray="5 5" dot={false} />
-                      <Line type="monotone" dataKey="p90" stroke="#3b82f6" strokeWidth={1} strokeDasharray="5 5" dot={false} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="bg-gray-50 border border-gray-200 border-dashed rounded-xl h-full min-h-[400px] flex items-center justify-center">
-              <div className="text-center">
-                <TrendingDown className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 font-medium">Configure portfolio and run simulation</p>
-              </div>
+              
+              <button
+                onClick={runSimulation}
+                disabled={loading || totalWeight !== 100}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl flex items-center justify-center font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg shadow-blue-200"
+              >
+                {loading ? "Simulating 10,000 futures..." : "Run Stress Test"}
+              </button>
+            </div>
+          </div>
+          
+          {error && (
+            <div className="mt-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-start max-w-3xl">
+              <AlertCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
+              {error}
             </div>
           )}
         </div>
       </div>
+
+      {/* Results Section */}
+      {data && (
+        <div id="results-section" className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          
+          {/* Plain English Summary */}
+          <div className={`p-8 rounded-2xl border ${getRiskColor(data.risk_metrics.risk_color)}`}>
+            <div className="flex items-start gap-6">
+              <div className="bg-white p-4 rounded-full shadow-sm">
+                {getRiskIcon(data.risk_metrics.risk_label)}
+              </div>
+              <div>
+                <h3 className="text-3xl font-bold mb-2">{data.risk_metrics.risk_label}</h3>
+                <p className="text-lg opacity-90 max-w-3xl">
+                  Based on current market conditions ({data.regime.name.toLowerCase()}), if you invested <strong>{formatCurrency(data.simulation.initial_value)}</strong> today for 30 days:
+                </p>
+                
+                <ul className="mt-6 space-y-4">
+                  <li className="flex items-start">
+                    <span className="text-xl mr-3">📉</span>
+                    <p className="text-lg">
+                      <strong>In a bad month</strong>, you could realistically lose around <strong>{formatCurrency(data.risk_metrics.var_95_value)}</strong>.
+                      <HelpTooltip text="This is the Value at Risk (VaR). 95% of the time, your losses will be less than this." />
+                    </p>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-xl mr-3">🚨</span>
+                    <p className="text-lg">
+                      <strong>In an extreme crash</strong>, your average loss in the worst 5% of cases would be about <strong>{formatCurrency(data.risk_metrics.cvar_95_value)}</strong>.
+                      <HelpTooltip text="This is the Expected Shortfall (CVaR). It measures how bad things get when the VaR threshold is broken." />
+                    </p>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Simple Visuals */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+              <div className="flex justify-between items-end mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800">Possible Future Outcomes</h3>
+                  <p className="text-gray-500 text-sm">Showing the range of possibilities over the next 30 days.</p>
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="flex items-center"><span className="w-3 h-3 rounded-full bg-green-500 mr-2"></span> Expected</span>
+                  <span className="flex items-center"><span className="w-3 h-3 rounded-full bg-emerald-100 mr-2"></span> Likely Range</span>
+                </div>
+              </div>
+              
+              <div className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#9ca3af'}} dy={10} />
+                    <YAxis 
+                      domain={['auto', 'auto']} 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{fill: '#9ca3af'}}
+                      tickFormatter={(val) => `₹${(val/1000).toFixed(0)}k`} 
+                      dx={-10}
+                    />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px 16px' }}
+                      formatter={(value: any, name?: any) => {
+                        const nameStr = String(name || '');
+                        if (nameStr.startsWith('path_')) return [null, null];
+                        if (Array.isArray(value)) return [`₹${Math.round(value[0]).toLocaleString()} - ₹${Math.round(value[1]).toLocaleString()}`, "Likely Range (10th-90th Percentile)"];
+                        if (nameStr === 'p50') return [`₹${Math.round(value).toLocaleString()}`, "Expected Value (Median)"];
+                        return [null, null];
+                      }} 
+                      labelFormatter={(label) => `Day ${label}`}
+                    />
+                    
+                    {/* Background Sample Paths */}
+                    {data.simulation.sample_paths?.map((_: any, i: number) => (
+                      <Line key={`path_${i}`} type="monotone" dataKey={`path_${i}`} stroke="#9ca3af" strokeWidth={1} opacity={0.1} dot={false} isAnimationActive={false} tooltipType="none" />
+                    ))}
+
+                    {/* Confidence Band (P10 to P90) */}
+                    <Area 
+                      type="monotone" 
+                      dataKey="p10_p90" 
+                      stroke="none" 
+                      fill="#d1fae5" 
+                      opacity={0.6}
+                    />
+                    
+                    {/* Median Line */}
+                    <Line type="monotone" dataKey="p50" stroke="#10b981" strokeWidth={4} dot={false} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Chance of Making Money</h3>
+                <div className="h-12 w-full bg-red-100 rounded-xl overflow-hidden flex relative">
+                  <div 
+                    className="h-full bg-green-500 transition-all duration-1000 ease-out flex items-center px-4" 
+                    style={{ width: `${100 - data.risk_metrics.prob_loss_0}%` }}
+                  >
+                    <span className="text-white font-bold">{Math.round(100 - data.risk_metrics.prob_loss_0)}% Profit</span>
+                  </div>
+                  <div className="absolute right-4 top-0 bottom-0 flex items-center text-red-700 font-bold">
+                    {Math.round(data.risk_metrics.prob_loss_0)}% Loss
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500 mt-4 text-center">
+                  Based on 10,000 simulated futures, you have a <strong>{Math.round(100 - data.risk_metrics.prob_loss_0)}% chance</strong> of ending the 30 days with more than your initial {formatCurrency(data.simulation.initial_value)}.
+                </p>
+              </div>
+              
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <h3 className="text-lg font-bold text-gray-800 mb-2">Severe Loss Risk</h3>
+                <div className="flex items-end gap-2 mb-2">
+                  <span className="text-4xl font-extrabold text-red-500">{data.risk_metrics.prob_loss_20.toFixed(1)}%</span>
+                  <span className="text-gray-500 mb-1">chance</span>
+                </div>
+                <p className="text-sm text-gray-500">
+                  Probability of losing more than 20% of your portfolio value in the next 30 days.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Technical Details Accordion */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <button 
+              onClick={() => setShowTechDetails(!showTechDetails)}
+              className="w-full px-6 py-4 flex items-center justify-between text-left focus:outline-none hover:bg-gray-50 transition"
+            >
+              <div className="flex items-center text-gray-700 font-semibold">
+                <span className="mr-2">🔬</span> Show technical details
+              </div>
+              {showTechDetails ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+            </button>
+            
+            {showTechDetails && (
+              <div className="px-6 pb-6 pt-2 border-t border-gray-100">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Model Engine</div>
+                    <div className="font-medium">Student's t-Copula / GBM</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Simulations</div>
+                    <div className="font-medium">{data.simulation.num_simulations.toLocaleString()} paths</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Regime State</div>
+                    <div className="font-medium text-blue-600">{data.regime.name}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Max Drawdown (95%)</div>
+                    <div className="font-medium text-red-600">-{data.risk_metrics.max_drawdown_percent_95.toFixed(2)}%</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">VaR 99%</div>
+                    <div className="font-medium">-{formatCurrency(data.risk_metrics.var_99_value)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Best Case Max</div>
+                    <div className="font-medium text-green-600">{formatCurrency(data.risk_metrics.best_case)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-1 font-semibold">Worst Case Min</div>
+                    <div className="font-medium text-red-600">{formatCurrency(data.risk_metrics.worst_case)}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          
+        </div>
+      )}
     </div>
   );
 }
