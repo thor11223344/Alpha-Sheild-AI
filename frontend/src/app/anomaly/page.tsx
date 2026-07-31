@@ -1,41 +1,20 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { 
-  Activity, 
-  Search, 
-  AlertCircle, 
-  Minus, 
-  TrendingUp, 
-  MousePointer, 
-  Trash2, 
-  Plus, 
-  Palette,
-  X,
-  Target
+  Activity, Search, AlertCircle, Minus, TrendingUp, MousePointer, 
+  Trash2, Plus, Palette, Target, X
 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Scatter,
-  ComposedChart,
-  Bar,
-  ReferenceLine
-} from "recharts";
-
 import { StockSelector } from "@/components/StockSelector";
+import { createChart, ColorType, CrosshairMode, LineStyle, IChartApi, ISeriesApi, AreaSeries, HistogramSeries, LineSeries, createSeriesMarkers } from "lightweight-charts";
 
 interface HorizontalLine {
   id: string;
   price: number;
   color: string;
   label: string;
+  line: any;
 }
 
 interface FreestyleLine {
@@ -45,6 +24,7 @@ interface FreestyleLine {
   date2: string;
   price2: number;
   color: string;
+  series: any;
 }
 
 export default function AnomalyPage() {
@@ -54,30 +34,34 @@ export default function AnomalyPage() {
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState("");
 
-  // Trendline Drawing States
   const [drawMode, setDrawMode] = useState<"pointer" | "horizontal" | "freestyle">("pointer");
-  const [lineColor, setLineColor] = useState<string>("#10b981"); // Default Emerald Green
+  const [lineColor, setLineColor] = useState<string>("#10b981");
   const [horizontalLines, setHorizontalLines] = useState<HorizontalLine[]>([]);
   const [freestyleLines, setFreestyleLines] = useState<FreestyleLine[]>([]);
   
-  // Recharts Point Snapping States
   const [freestyleStart, setFreestyleStart] = useState<{ date: string; price: number } | null>(null);
-  const [freestyleDraft, setFreestyleDraft] = useState<{ date1: string; price1: number; date2: string; price2: number } | null>(null);
   const [manualPrice, setManualPrice] = useState<string>("");
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const mainSeriesRef = useRef<ISeriesApi<"Area"> | null>(null);
+  const freestyleDraftSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+
+  const stateRef = useRef({ drawMode, lineColor, freestyleStart, data });
+  useEffect(() => {
+    stateRef.current = { drawMode, lineColor, freestyleStart, data };
+  }, [drawMode, lineColor, freestyleStart, data]);
+
+  const roundToTwo = (val: number) => Math.round(val * 100) / 100;
 
   const fetchData = async () => {
     const cleanTicker = ticker.toUpperCase().replace(/\.NS$/i, "");
     setLoading(true);
     setError("");
     try {
-      const response = await axios.get(`http://localhost:8000/api/anomaly/?ticker=${cleanTicker}&period=${period}`);
+      const response = await axios.get(`http://127.0.0.1:8000/api/anomaly/?ticker=${cleanTicker}&period=${period}`);
       setData(response.data);
-      setHorizontalLines([]);
-      setFreestyleLines([]);
-      setFreestyleStart(null);
-      setFreestyleDraft(null);
+      clearAllLines();
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to fetch data.");
     } finally {
@@ -85,156 +69,292 @@ export default function AnomalyPage() {
     }
   };
 
-  // Add Horizontal Line via manual price input
+  useEffect(() => {
+    if (!chartContainerRef.current || !data?.data) return;
+
+    if (chartRef.current) {
+        try { chartRef.current.remove(); } catch (e) {}
+        chartRef.current = null;
+    }
+    
+    const chart = createChart(chartContainerRef.current, {
+      layout: { background: { type: ColorType.Solid, color: 'white' }, textColor: '#333' },
+      width: chartContainerRef.current.clientWidth,
+      height: 480,
+      crosshair: { mode: CrosshairMode.Normal },
+      rightPriceScale: { borderColor: '#d1d5db' },
+      timeScale: { borderColor: '#d1d5db', timeVisible: true },
+    });
+    chartRef.current = chart;
+
+    const mainSeries = chart.addSeries(AreaSeries, {
+      lineColor: '#2962FF', topColor: '#2962FF', bottomColor: 'rgba(41, 98, 255, 0.1)',
+    });
+    mainSeriesRef.current = mainSeries;
+
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      color: '#26a69a',
+      priceFormat: { type: 'volume' },
+      priceScaleId: '',
+    });
+    volumeSeries.priceScale().applyOptions({
+      scaleMargins: { top: 0.8, bottom: 0 },
+    });
+
+    const chartData = data.data.map((d: any) => ({ time: d.date, value: d.close }));
+    const volumeData = data.data.map((d: any) => ({ 
+      time: d.date, 
+      value: d.volume, 
+      color: d.is_anomaly ? '#ef5350' : '#26a69a'
+    }));
+
+    mainSeries.setData(chartData);
+    volumeSeries.setData(volumeData);
+    
+    const markers = data.data
+      .filter((d: any) => d.is_anomaly)
+      .map((d: any) => ({
+        time: d.date,
+        position: 'aboveBar',
+        color: '#ef5350',
+        shape: 'circle',
+        text: 'Anomaly'
+      }));
+    const seriesMarkers = createSeriesMarkers(mainSeries);
+    seriesMarkers.setMarkers(markers);
+    
+    chart.timeScale().fitContent();
+
+    const clickHandler = (param: any) => {
+      const state = stateRef.current;
+      if (state.drawMode === "pointer" || !param.point) return;
+      
+      const price = mainSeries.coordinateToPrice(param.point.y);
+      if (price === null) return;
+      
+      let time = param.time as string | null | undefined;
+      if (!time && chartRef.current) {
+        time = chartRef.current.timeScale().coordinateToTime(param.point.x) as string | null | undefined;
+      }
+      if (!time) return;
+      
+      const targetPrice = roundToTwo(price);
+      
+      if (state.drawMode === "horizontal") {
+         const line = mainSeries.createPriceLine({
+            price: targetPrice,
+            color: state.lineColor,
+            lineWidth: 2,
+            lineStyle: LineStyle.Solid,
+            axisLabelVisible: true,
+            title: 'Line',
+         });
+         setHorizontalLines(prev => [...prev, {
+            id: Math.random().toString(), price: targetPrice, color: state.lineColor, label: "Level", line
+         }]);
+      } else if (state.drawMode === "freestyle") {
+         const start = state.freestyleStart;
+         if (!start) {
+            setFreestyleStart({ date: time, price: targetPrice });
+         } else {
+            const newLineSeries = chart.addSeries(LineSeries, { color: state.lineColor, lineWidth: 2 });
+            
+            const t1 = start.date;
+            const t2 = time;
+            
+            const t1Val = typeof t1 === 'object' ? new Date((t1 as any).year, (t1 as any).month - 1, (t1 as any).day).getTime() : new Date(t1 as string).getTime();
+            const t2Val = typeof t2 === 'object' ? new Date((t2 as any).year, (t2 as any).month - 1, (t2 as any).day).getTime() : new Date(t2 as string).getTime();
+            
+            let dataPoints = [];
+            if (t1Val < t2Val) {
+               dataPoints = [{ time: t1, value: start.price }, { time: t2, value: targetPrice }];
+            } else if (t1Val > t2Val) {
+               dataPoints = [{ time: t2, value: targetPrice }, { time: t1, value: start.price }];
+            } else {
+               dataPoints = [{ time: t1, value: targetPrice }];
+            }
+
+            try {
+              newLineSeries.setData(dataPoints);
+            } catch (e) {
+              console.error("Trendline Commit Error:", e, { t1, t2, dataPoints });
+            }
+            
+            setFreestyleLines(prev => [...prev, {
+               id: Math.random().toString(), date1: start.date, price1: start.price,
+               date2: time, price2: targetPrice, color: state.lineColor, series: newLineSeries
+            }]);
+            
+            setFreestyleStart(null);
+            if (freestyleDraftSeriesRef.current) {
+               chart.removeSeries(freestyleDraftSeriesRef.current);
+               freestyleDraftSeriesRef.current = null;
+            }
+         }
+      }
+    };
+
+    const crosshairMoveHandler = (param: any) => {
+       const state = stateRef.current;
+       const start = state.freestyleStart;
+       if (state.drawMode === "freestyle" && start && param.point) {
+          let time = param.time as string | null | undefined;
+          if (!time && chartRef.current) {
+             time = chartRef.current.timeScale().coordinateToTime(param.point.x) as string | null | undefined;
+          }
+          if (!time) return;
+
+          const targetPrice = mainSeries.coordinateToPrice(param.point.y);
+          if (targetPrice !== null) {
+              if (!freestyleDraftSeriesRef.current) {
+                 freestyleDraftSeriesRef.current = chart.addSeries(LineSeries, { color: state.lineColor, lineWidth: 2, lineStyle: LineStyle.Dashed });
+              }
+              
+              const t1 = start.date;
+              const t2 = time;
+              
+              const t1Val = typeof t1 === 'object' ? new Date((t1 as any).year, (t1 as any).month - 1, (t1 as any).day).getTime() : new Date(t1 as string).getTime();
+              const t2Val = typeof t2 === 'object' ? new Date((t2 as any).year, (t2 as any).month - 1, (t2 as any).day).getTime() : new Date(t2 as string).getTime();
+              
+              let dataPoints = [];
+              if (t1Val < t2Val) {
+                 dataPoints = [{ time: t1, value: start.price }, { time: t2, value: targetPrice }];
+              } else if (t1Val > t2Val) {
+                 dataPoints = [{ time: t2, value: targetPrice }, { time: t1, value: start.price }];
+              } else {
+                 return;
+              }
+              
+              try {
+                freestyleDraftSeriesRef.current.setData(dataPoints);
+              } catch(e) {
+                console.error("Trendline Draft Error:", e, { t1, t2, dataPoints });
+              }
+          }
+       }
+    };
+    
+    chart.subscribeClick(clickHandler);
+    chart.subscribeCrosshairMove(crosshairMoveHandler);
+
+    const handleResize = () => {
+      if (chartContainerRef.current) {
+        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+      }
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      chart.unsubscribeClick(clickHandler);
+      chart.unsubscribeCrosshairMove(crosshairMoveHandler);
+      try { chart.remove(); } catch (e) {}
+      chartRef.current = null;
+      mainSeriesRef.current = null;
+      freestyleDraftSeriesRef.current = null;
+    };
+  }, [data]);
+
+  const removeHorizontalLine = (id: string) => {
+    setHorizontalLines((prev) => {
+      const lineToRemove = prev.find(l => l.id === id);
+      if (lineToRemove && mainSeriesRef.current) {
+         mainSeriesRef.current.removePriceLine(lineToRemove.line);
+      }
+      return prev.filter((l) => l.id !== id);
+    });
+  };
+
+  const removeFreestyleLine = (id: string) => {
+    setFreestyleLines((prev) => {
+      const lineToRemove = prev.find(l => l.id === id);
+      if (lineToRemove && chartRef.current) {
+         chartRef.current.removeSeries(lineToRemove.series);
+      }
+      return prev.filter((l) => l.id !== id);
+    });
+  };
+
+  const clearAllLines = () => {
+    horizontalLines.forEach(l => {
+       if (mainSeriesRef.current) mainSeriesRef.current.removePriceLine(l.line);
+    });
+    freestyleLines.forEach(l => {
+       if (chartRef.current) chartRef.current.removeSeries(l.series);
+    });
+    setHorizontalLines([]);
+    setFreestyleLines([]);
+    setFreestyleStart(null);
+    if (freestyleDraftSeriesRef.current && chartRef.current) {
+        chartRef.current.removeSeries(freestyleDraftSeriesRef.current);
+        freestyleDraftSeriesRef.current = null;
+    }
+  };
+
   const handleAddManualHorizontalLine = () => {
     const numPrice = parseFloat(manualPrice);
-    if (isNaN(numPrice) || numPrice <= 0) return;
+    if (isNaN(numPrice) || numPrice <= 0 || !mainSeriesRef.current) return;
+    
+    const line = mainSeriesRef.current.createPriceLine({
+       price: numPrice,
+       color: lineColor,
+       lineWidth: 2,
+       lineStyle: LineStyle.Solid,
+       axisLabelVisible: true,
+       title: 'Manual Level',
+    });
+
     setHorizontalLines((prev) => [
       ...prev,
       {
         id: Math.random().toString(),
         price: numPrice,
         color: lineColor,
-        label: numPrice > (data?.data?.[data.data.length - 1]?.close || 0) ? "Resistance" : "Support"
+        label: "Manual Level",
+        line
       }
     ]);
     setManualPrice("");
   };
 
-  // Universal Click Handler for Horizontal & Freestyle drawing
-  const handleChartClick = (chartState: any, mouseEvent?: React.MouseEvent<HTMLDivElement>) => {
-    if (drawMode === "pointer" || !data?.data?.length) return;
-
-    const activeItem = chartState?.activePayload?.[0]?.payload;
-    const rect = chartContainerRef.current?.getBoundingClientRect();
-
-    let targetPrice: number;
-    let targetDate: string;
-
-    const prices = data.data.map((d: any) => d.close);
-    const minP = Math.min(...prices);
-    const maxP = Math.max(...prices);
-    const range = maxP - minP || 1;
-
-    // Calculate exact click Y relative to container
-    let clickY: number | null = null;
-    if (mouseEvent && rect) {
-      clickY = mouseEvent.clientY - rect.top;
-    } else if (chartState?.chartY != null) {
-      clickY = chartState.chartY + 15; // 15px top margin
-    }
-
-    if (drawMode === "horizontal") {
-      if (clickY != null && rect) {
-        // Inner chart plotting bounds: top=15px, bottom=55px (margin 25px + XAxis 30px)
-        const topPadding = 15;
-        const bottomPadding = 55;
-        const plotH = Math.max(1, rect.height - topPadding - bottomPadding);
-        const relativeY = Math.max(0, Math.min(1, (clickY - topPadding) / plotH));
-        targetPrice = roundToTwo(maxP - relativeY * range);
-      } else if (activeItem) {
-        targetPrice = roundToTwo(activeItem.close);
-      } else {
-        return;
-      }
-
-      setHorizontalLines((prev) => [
-        ...prev,
-        {
-          id: Math.random().toString(),
-          price: targetPrice,
-          color: lineColor,
-          label: targetPrice > (data?.data?.[data.data.length - 1]?.close || 0) ? "Resistance" : "Support"
-        }
-      ]);
-    } else if (drawMode === "freestyle") {
-      if (activeItem) {
-        targetPrice = roundToTwo(activeItem.close);
-        targetDate = activeItem.date;
-      } else if (clickY != null && rect && mouseEvent) {
-        const clickX = mouseEvent.clientX - rect.left;
-        const topPadding = 15;
-        const bottomPadding = 55;
-        const plotH = Math.max(1, rect.height - topPadding - bottomPadding);
-        const relativeY = Math.max(0, Math.min(1, (clickY - topPadding) / plotH));
-        targetPrice = roundToTwo(maxP - relativeY * range);
-
-        const plotW = Math.max(1, rect.width - 50);
-        const relativeX = Math.max(0, Math.min(1, (clickX - 25) / plotW));
-        const idx = Math.floor(relativeX * (data.data.length - 1));
-        targetDate = data.data[Math.max(0, Math.min(data.data.length - 1, idx))]?.date || data.data[0].date;
-      } else {
-        return;
-      }
-
-      if (!freestyleStart) {
-        setFreestyleStart({ date: targetDate, price: targetPrice });
-      } else {
-        setFreestyleLines((prev) => [
-          ...prev,
-          {
-            id: Math.random().toString(),
-            date1: freestyleStart.date,
-            price1: freestyleStart.price,
-            date2: targetDate,
-            price2: targetPrice,
-            color: lineColor
-          }
-        ]);
-        setFreestyleStart(null);
-        setFreestyleDraft(null);
-      }
-    }
-  };
-
-  const handleRechartsMouseMove = (chartState: any) => {
-    if (drawMode === "freestyle" && freestyleStart && chartState?.activePayload?.[0]?.payload) {
-      const activeItem = chartState.activePayload[0].payload;
-      setFreestyleDraft({
-        date1: freestyleStart.date,
-        price1: freestyleStart.price,
-        date2: activeItem.date,
-        price2: activeItem.close
-      });
-    }
-  };
-
-  // Quick Preset Adders
   const addHighResistanceLine = () => {
-    if (!data?.data?.length) return;
+    if (!data?.data?.length || !mainSeriesRef.current) return;
     const prices = data.data.map((d: any) => d.close);
     const maxP = roundToTwo(Math.max(...prices));
+    
+    const line = mainSeriesRef.current.createPriceLine({
+       price: maxP,
+       color: "#ef4444",
+       lineWidth: 2,
+       lineStyle: LineStyle.Solid,
+       axisLabelVisible: true,
+       title: 'Resistance',
+    });
+
     setHorizontalLines((prev) => [
       ...prev,
-      { id: Math.random().toString(), price: maxP, color: "#ef4444", label: "Resistance (Period High)" }
+      { id: Math.random().toString(), price: maxP, color: "#ef4444", label: "Resistance (Period High)", line }
     ]);
   };
 
   const addLowSupportLine = () => {
-    if (!data?.data?.length) return;
+    if (!data?.data?.length || !mainSeriesRef.current) return;
     const prices = data.data.map((d: any) => d.close);
     const minP = roundToTwo(Math.min(...prices));
+
+    const line = mainSeriesRef.current.createPriceLine({
+       price: minP,
+       color: "#10b981",
+       lineWidth: 2,
+       lineStyle: LineStyle.Solid,
+       axisLabelVisible: true,
+       title: 'Support',
+    });
+
     setHorizontalLines((prev) => [
       ...prev,
-      { id: Math.random().toString(), price: minP, color: "#10b981", label: "Support (Period Low)" }
+      { id: Math.random().toString(), price: minP, color: "#10b981", label: "Support (Period Low)", line }
     ]);
-  };
-
-  const roundToTwo = (val: number) => Math.round(val * 100) / 100;
-
-  const removeHorizontalLine = (id: string) => {
-    setHorizontalLines((prev) => prev.filter((l) => l.id !== id));
-  };
-
-  const removeFreestyleLine = (id: string) => {
-    setFreestyleLines((prev) => prev.filter((l) => l.id !== id));
-  };
-
-  const clearAllLines = () => {
-    setHorizontalLines([]);
-    setFreestyleLines([]);
-    setFreestyleStart(null);
-    setFreestyleDraft(null);
   };
 
   return (
@@ -304,18 +424,16 @@ export default function AnomalyPage() {
             <div className="flex justify-between items-center flex-wrap gap-4 border-b pb-4">
               <div>
                 <h3 className="text-lg font-bold text-gray-800 flex items-center">
-                  Price & Volume History ({period === '3y' ? '3 Years' : period === '5y' ? '5 Years' : '1 Year'})
-                  <span className="ml-2 text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-semibold flex items-center">
-                    <Target className="w-3 h-3 mr-1" /> Precision Snap Active
+                  Price & Volume History 
+                  <span className="ml-2 text-xs bg-sky-100 text-sky-800 px-2 py-0.5 rounded-md font-semibold flex items-center">
+                    <Target className="w-3 h-3 mr-1" /> TradingView Engine
                   </span>
                 </h3>
-                <p className="text-xs text-gray-500">Click anywhere on graph candles to place exact support, resistance, and trendlines</p>
               </div>
 
-              {/* Drawing Toolbar */}
               <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-xl border border-gray-200 flex-wrap">
                 <button
-                  onClick={() => { setDrawMode("pointer"); setFreestyleStart(null); setFreestyleDraft(null); }}
+                  onClick={() => { setDrawMode("pointer"); setFreestyleStart(null); }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center transition ${
                     drawMode === "pointer" ? "bg-white text-gray-900 shadow-sm border border-gray-200" : "text-gray-500 hover:text-gray-800"
                   }`}
@@ -324,7 +442,7 @@ export default function AnomalyPage() {
                 </button>
 
                 <button
-                  onClick={() => { setDrawMode("horizontal"); setFreestyleStart(null); setFreestyleDraft(null); }}
+                  onClick={() => { setDrawMode("horizontal"); setFreestyleStart(null); }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center transition ${
                     drawMode === "horizontal" ? "bg-sky-500 text-white shadow-sm" : "text-gray-600 hover:text-gray-900"
                   }`}
@@ -333,7 +451,7 @@ export default function AnomalyPage() {
                 </button>
 
                 <button
-                  onClick={() => { setDrawMode("freestyle"); setFreestyleStart(null); setFreestyleDraft(null); }}
+                  onClick={() => { setDrawMode("freestyle"); setFreestyleStart(null); }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center transition ${
                     drawMode === "freestyle" ? "bg-purple-600 text-white shadow-sm" : "text-gray-600 hover:text-gray-900"
                   }`}
@@ -341,7 +459,6 @@ export default function AnomalyPage() {
                   <TrendingUp className="w-3.5 h-3.5 mr-1.5" /> + Freestyle Trendline
                 </button>
 
-                {/* Color Palette Selector */}
                 <div className="flex items-center gap-1 pl-2 border-l border-gray-300">
                   <Palette className="w-3.5 h-3.5 text-gray-400 mr-1" />
                   {["#10b981", "#ef4444", "#0284c7", "#8b5cf6", "#f59e0b"].map((c) => (
@@ -354,7 +471,6 @@ export default function AnomalyPage() {
                   ))}
                 </div>
 
-                {/* Quick High/Low Presets */}
                 <div className="flex items-center gap-1 pl-2 border-l border-gray-300">
                   <button
                     onClick={addHighResistanceLine}
@@ -370,7 +486,6 @@ export default function AnomalyPage() {
                   </button>
                 </div>
 
-                {/* Manual Price Level Input */}
                 <div className="flex items-center gap-1 pl-2 border-l border-gray-300">
                   <input
                     type="number"
@@ -399,245 +514,54 @@ export default function AnomalyPage() {
               </div>
             </div>
 
-            {/* Instruction Banner when Drawing */}
             {drawMode !== "pointer" && (
               <div className="bg-sky-50 border border-sky-200 text-sky-800 text-xs px-4 py-2 rounded-lg flex justify-between items-center">
                 <span>
                   {drawMode === "horizontal" && "🎯 Click anywhere on the chart (or use inputs above) to place a Horizontal Support/Resistance line."}
-                  {drawMode === "freestyle" && (freestyleStart ? `🎯 Click Point 2 (End Date & Price) to complete trendline starting from ${freestyleStart.date} (₹${freestyleStart.price}).` : "🎯 Click Point 1 (Start Date & Price) on the chart line to begin drawing freestyle trendline.")}
+                  {drawMode === "freestyle" && (freestyleStart ? `🎯 Click Point 2 (End Date & Price) to complete trendline.` : "🎯 Click Point 1 (Start Date & Price) on the chart line to begin drawing freestyle trendline.")}
                 </span>
-                <button onClick={() => { setDrawMode("pointer"); setFreestyleStart(null); setFreestyleDraft(null); }} className="text-sky-600 hover:text-sky-900 font-bold text-xs underline">
+                <button onClick={() => { setDrawMode("pointer"); setFreestyleStart(null); }} className="text-sky-600 hover:text-sky-900 font-bold text-xs underline">
                   Exit Draw Mode
                 </button>
               </div>
             )}
 
-            {/* Interactive Chart Container */}
             <div 
               ref={chartContainerRef}
-              onClick={(e) => handleChartClick(null, e)}
               className={`h-[480px] relative rounded-xl transition ${drawMode !== "pointer" ? "cursor-crosshair ring-2 ring-sky-400" : ""}`}
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart 
-                  data={data.data} 
-                  margin={{ top: 15, right: 25, left: 15, bottom: 25 }}
-                  onClick={(state) => handleChartClick(state)}
-                  onMouseMove={handleRechartsMouseMove}
-                >
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} vertical={false} />
-                  <XAxis 
-                    dataKey="date" 
-                    minTickGap={40}
-                    tick={{ fill: '#64748b', fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={{ stroke: '#e2e8f0' }}
-                    dy={10}
-                    tickFormatter={(val: string) => {
-                      if (!val) return "";
-                      const parts = val.split("-");
-                      if (parts.length < 3) return val;
-                      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                      const monthStr = monthNames[parseInt(parts[1], 10) - 1] || parts[1];
-                      return period === "1y" ? `${monthStr} ${parts[2]}` : `${monthStr} '${parts[0].slice(2)}`;
-                    }}
-                  />
-                  <YAxis 
-                    yAxisId="left" 
-                    domain={['auto', 'auto']}
-                    tick={{ fill: '#64748b', fontSize: 11 }}
-                    axisLine={false}
-                    tickLine={false}
-                    dx={-5}
-                    tickFormatter={(val: number) => {
-                      if (val >= 100000) return `₹${(val / 100000).toFixed(1)}L`;
-                      if (val >= 1000) return `₹${(val / 1000).toFixed(1)}k`;
-                      return `₹${Math.round(val)}`;
-                    }}
-                  />
-                  <YAxis 
-                    yAxisId="right" 
-                    orientation="right" 
-                    domain={[0, (dataMax: number) => dataMax * 4]} 
-                    hide 
-                  />
+            />
+          </div>
 
-                  {/* Horizontal User-Placed Lines (Precise Price ReferenceLines) */}
-                  {horizontalLines.map((line) => (
-                    <ReferenceLine 
-                      key={line.id} 
-                      yAxisId="left" 
-                      y={line.price} 
-                      stroke={line.color} 
-                      strokeWidth={2} 
-                      strokeDasharray="4 4"
-                      label={{ 
-                        value: `${line.label}: ₹${line.price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 
-                        fill: line.color, 
-                        position: 'right', 
-                        fontSize: 11, 
-                        fontWeight: 700 
-                      }}
-                    />
-                  ))}
-
-                  {/* Freestyle Trendlines (Precise Recharts Segment ReferenceLines) */}
-                  {freestyleLines.map((line) => (
-                    <ReferenceLine 
-                      key={line.id} 
-                      yAxisId="left" 
-                      segment={[
-                        { x: line.date1, y: line.price1 }, 
-                        { x: line.date2, y: line.price2 }
-                      ]} 
-                      stroke={line.color} 
-                      strokeWidth={2.5} 
-                      strokeDasharray="4 4"
-                    />
-                  ))}
-
-                  {/* Live Freestyle Drawing Draft Preview */}
-                  {freestyleDraft && (
-                    <ReferenceLine 
-                      yAxisId="left" 
-                      segment={[
-                        { x: freestyleDraft.date1, y: freestyleDraft.price1 }, 
-                        { x: freestyleDraft.date2, y: freestyleDraft.price2 }
-                      ]} 
-                      stroke={lineColor} 
-                      strokeWidth={2} 
-                      strokeDasharray="3 3"
-                    />
-                  )}
-
-                  {drawMode === "pointer" && (
-                    <Tooltip 
-                      content={({ active, payload }: any) => {
-                        if (active && payload && payload.length) {
-                          const item = payload[0].payload;
-                          return (
-                            <div className="bg-white p-4 rounded-xl shadow-xl border border-gray-200 text-xs space-y-2 max-w-xs z-50">
-                              <div className="flex justify-between items-center border-b pb-1 font-bold text-gray-800">
-                                <span>{item.date}</span>
-                                <span className="text-sky-600 font-bold text-sm">₹{Number(item.close).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                              </div>
-                              <div className="flex justify-between text-gray-500">
-                                <span>Volume:</span>
-                                <span className="font-semibold text-gray-800">{Number(item.volume).toLocaleString('en-IN')} shares</span>
-                              </div>
-                              {item.is_anomaly && (
-                                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg text-red-700">
-                                  <span className="font-bold block mb-1 text-red-700 flex items-center">
-                                    🚨 Anomaly Detected
-                                  </span>
-                                  <p className="text-[11px] leading-tight text-red-600">{item.explanation}</p>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                  )}
-
-                  <Bar yAxisId="right" dataKey="volume" fill="#cbd5e1" opacity={0.5} radius={[2, 2, 0, 0]} />
-                  <Line 
-                    yAxisId="left" 
-                    type="monotone" 
-                    dataKey="close" 
-                    stroke="#0284c7" 
-                    strokeWidth={2.5} 
-                    dot={false} 
-                    activeDot={{ r: 5, fill: "#0284c7" }}
-                  />
-                  <Scatter 
-                    yAxisId="left"
-                    dataKey={(row: any) => row.is_anomaly ? row.close : null} 
-                    shape={(props: any) => {
-                      const { cx, cy, payload } = props;
-                      if (!payload || !payload.is_anomaly || cx == null || cy == null) return null;
-                      return (
-                        <g key={`dot-${payload.date}`}>
-                          <circle cx={cx} cy={cy} r={7} fill="#ef4444" fillOpacity={0.3} />
-                          <circle cx={cx} cy={cy} r={4} fill="#dc2626" stroke="#ffffff" strokeWidth={1.5} />
-                        </g>
-                      );
-                    }}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Active User Lines Management Panel */}
-            {(horizontalLines.length > 0 || freestyleLines.length > 0) && (
-              <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
-                <h4 className="font-bold text-xs text-gray-700 uppercase tracking-wider flex items-center justify-between">
-                  <span>Active Drawn Trendlines ({horizontalLines.length + freestyleLines.length})</span>
-                  <button onClick={clearAllLines} className="text-red-600 hover:text-red-800 text-[11px] underline font-semibold">
-                    Clear All
-                  </button>
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {horizontalLines.map((line) => (
-                    <span 
-                      key={line.id} 
-                      className="inline-flex items-center text-xs px-2.5 py-1 bg-white rounded-lg border shadow-sm gap-2"
-                      style={{ borderColor: line.color }}
-                    >
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: line.color }} />
-                      <span className="font-semibold text-gray-800">Horizontal: ₹{line.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                      <button onClick={() => removeHorizontalLine(line.id)} className="text-gray-400 hover:text-red-600">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </span>
-                  ))}
-                  {freestyleLines.map((line, idx) => (
-                    <span 
-                      key={line.id} 
-                      className="inline-flex items-center text-xs px-2.5 py-1 bg-white rounded-lg border shadow-sm gap-2"
-                      style={{ borderColor: line.color }}
-                    >
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: line.color }} />
-                      <span className="font-semibold text-gray-800">Freestyle: {line.date1} (₹{line.price1}) ➔ {line.date2} (₹{line.price2})</span>
-                      <button onClick={() => removeFreestyleLine(line.id)} className="text-gray-400 hover:text-red-600">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
+          {(horizontalLines.length > 0 || freestyleLines.length > 0) && (
+            <div className="bg-gray-50 border border-gray-200 p-4 rounded-xl">
+              <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center">
+                Active Annotations
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {horizontalLines.map((line) => (
+                  <div key={line.id} className="flex items-center bg-white border border-gray-200 px-3 py-1.5 rounded-lg shadow-sm text-xs">
+                    <div className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: line.color }} />
+                    <span className="font-semibold text-gray-800 mr-2">₹{line.price}</span>
+                    <span className="text-gray-500 mr-3">{line.label}</span>
+                    <button onClick={() => removeHorizontalLine(line.id)} className="text-gray-400 hover:text-red-500 transition">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+                {freestyleLines.map((line) => (
+                  <div key={line.id} className="flex items-center bg-white border border-gray-200 px-3 py-1.5 rounded-lg shadow-sm text-xs">
+                    <div className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: line.color }} />
+                    <span className="font-semibold text-gray-800 mr-1">₹{line.price1}</span>
+                    <span className="text-gray-400 mx-1">→</span>
+                    <span className="font-semibold text-gray-800 mr-3">₹{line.price2}</span>
+                    <button onClick={() => removeFreestyleLine(line.id)} className="text-gray-400 hover:text-red-500 transition">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <h3 className="text-lg font-bold mb-4">Detected Anomalies</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b">
-                    <th className="p-3 text-sm font-medium text-gray-500">Date</th>
-                    <th className="p-3 text-sm font-medium text-gray-500">Close Price</th>
-                    <th className="p-3 text-sm font-medium text-gray-500">Explanation</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.data.filter((d: any) => d.is_anomaly).reverse().map((d: any) => (
-                    <tr key={d.date} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className="p-3 text-sm">{d.date}</td>
-                      <td className="p-3 text-sm font-medium">₹{d.close.toFixed(2)}</td>
-                      <td className="p-3 text-sm text-gray-600">{d.explanation}</td>
-                    </tr>
-                  ))}
-                  {data.data.filter((d: any) => d.is_anomaly).length === 0 && (
-                    <tr>
-                      <td colSpan={3} className="p-4 text-center text-gray-500">No anomalies detected in the selected period.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

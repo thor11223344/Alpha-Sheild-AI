@@ -32,7 +32,7 @@ export function StockSelector({
     const fetchStocks = async () => {
       try {
         setLoading(true);
-        const res = await axios.get("http://localhost:8000/api/stocks/");
+        const res = await axios.get("http://127.0.0.1:8000/api/stocks/");
         setStocks(res.data);
       } catch (err) {
         console.error("Failed to load stocks:", err);

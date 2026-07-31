@@ -90,7 +90,7 @@ export default function IPOPage() {
   useEffect(() => {
     const fetchUpcomingIPOs = async () => {
       try {
-        const res = await axios.get("http://localhost:8000/api/ipo-evaluate/upcoming");
+        const res = await axios.get("http://127.0.0.1:8000/api/ipo-evaluate/upcoming");
         setUpcomingIPOs(res.data);
         if (res.data.length > 0) {
           handleSelectIPO(res.data[0]);
@@ -115,7 +115,7 @@ export default function IPOPage() {
     setLoading(true);
     setError("");
     try {
-      const response = await axios.post("http://localhost:8000/api/ipo-evaluate/", ipoFormData);
+      const response = await axios.post("http://127.0.0.1:8000/api/ipo-evaluate/", ipoFormData);
       setData(response.data);
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to evaluate IPO.");

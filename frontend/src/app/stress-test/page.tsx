@@ -115,7 +115,7 @@ export default function StressTestPage() {
         sampler_type: samplerType
       };
       
-      const response = await axios.post("http://localhost:8000/api/portfolio-stress/", payload);
+      const response = await axios.post("http://127.0.0.1:8000/api/portfolio-stress/", payload);
       setData(response.data);
       setTimeout(() => {
         document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
@@ -365,21 +365,44 @@ export default function StressTestPage() {
                 </div>
               </div>
               
-              <div className="h-[380px]">
+              <div className="h-[420px] bg-[#0f172a] rounded-2xl p-4 shadow-[inset_0_2px_20px_rgba(0,0,0,0.5)] relative overflow-hidden border border-slate-800">
+                {/* Advanced glow effect behind chart */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4/5 h-4/5 bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none"></div>
+                
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.2} />
-                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} dy={10} />
+                  <ComposedChart data={chartData} margin={{ top: 20, right: 20, left: 10, bottom: 20 }}>
+                    <defs>
+                      <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                      </linearGradient>
+                      <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="4" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                      </filter>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.5} />
+                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12, fontWeight: 600}} dy={15} />
                     <YAxis 
                       domain={['auto', 'auto']} 
                       axisLine={false} 
                       tickLine={false} 
-                      tick={{fill: '#64748b', fontSize: 11}}
+                      tick={{fill: '#94a3b8', fontSize: 12, fontWeight: 600}}
                       tickFormatter={(val) => `₹${(val/1000).toFixed(0)}k`} 
-                      dx={-5}
+                      dx={-10}
                     />
                     <Tooltip 
-                      contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      contentStyle={{ 
+                        backgroundColor: 'rgba(15, 23, 42, 0.85)', 
+                        borderRadius: '12px', 
+                        border: '1px solid rgba(51, 65, 85, 0.6)', 
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+                        backdropFilter: 'blur(12px)',
+                        color: '#f8fafc',
+                        padding: '12px 16px'
+                      }}
+                      itemStyle={{ color: '#e2e8f0', fontWeight: 600, padding: '4px 0' }}
+                      labelStyle={{ color: '#94a3b8', fontWeight: 700, marginBottom: '8px', borderBottom: '1px solid rgba(51, 65, 85, 0.6)', paddingBottom: '8px' }}
                       formatter={(value: any, name?: any) => {
                         const nameStr = String(name || '');
                         if (nameStr.startsWith('path_')) return [null, null];
@@ -391,18 +414,25 @@ export default function StressTestPage() {
                     />
                     
                     {data.simulation.sample_paths?.map((_: any, i: number) => (
-                      <Line key={`path_${i}`} type="monotone" dataKey={`path_${i}`} stroke="#9ca3af" strokeWidth={1} opacity={0.08} dot={false} isAnimationActive={false} tooltipType="none" />
+                      <Line key={`path_${i}`} type="monotone" dataKey={`path_${i}`} stroke="#475569" strokeWidth={1.5} opacity={0.15} dot={false} isAnimationActive={false} tooltipType="none" />
                     ))}
 
                     <Area 
                       type="monotone" 
                       dataKey="p10_p90" 
                       stroke="none" 
-                      fill="#d1fae5" 
-                      opacity={0.6}
+                      fill="url(#colorArea)" 
                     />
                     
-                    <Line type="monotone" dataKey="p50" stroke="#10b981" strokeWidth={3} dot={false} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="p50" 
+                      stroke="#10b981" 
+                      strokeWidth={4} 
+                      dot={false} 
+                      filter="url(#glow)"
+                      style={{ strokeLinecap: 'round' }}
+                    />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>

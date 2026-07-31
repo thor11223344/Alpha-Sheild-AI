@@ -1,4 +1,4 @@
-import { Shield, Activity, AlertTriangle, TrendingDown, Building } from "lucide-react";
+import { Shield, Activity, AlertTriangle, TrendingDown, Building, Share2 } from "lucide-react";
 import Link from "next/link";
 
 export default function Home() {
@@ -54,6 +54,27 @@ export default function Home() {
             <h2 className="text-xl font-bold mb-2">AI IPO Evaluator</h2>
             <p className="text-gray-600">
               A rule-based scoring engine that evaluates upcoming IPOs based on financial health, retail/QIB demand, and valuation metrics.
+            </p>
+          </div>
+        </Link>
+
+        <Link href="/live">
+          <div className="bg-black rounded-xl shadow-md p-6 border border-gray-800 hover:shadow-lg transition cursor-pointer h-full group relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-900/20 to-purple-900/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <Activity className="w-10 h-10 text-green-500 mb-4 animate-pulse relative z-10" />
+            <h2 className="text-xl font-bold mb-2 text-white relative z-10">Live Manipulation Tracking</h2>
+            <p className="text-gray-400 relative z-10">
+              Real-time tick-by-tick WebSocket tracking correlated with live news sentiment AI to detect ongoing bot campaigns and artificial hype.
+            </p>
+          </div>
+        </Link>
+
+        <Link href="/intelligence">
+          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 hover:shadow-lg transition cursor-pointer h-full border-l-4 border-l-purple-500">
+            <Share2 className="w-10 h-10 text-purple-600 mb-4" />
+            <h2 className="text-xl font-bold mb-2">Corporate Intelligence</h2>
+            <p className="text-gray-600">
+              Uncover insider trading activity, detect hidden institutional block deals, and map circular shell company holding networks.
             </p>
           </div>
         </Link>
